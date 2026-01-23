@@ -1,0 +1,271 @@
+name: Discord Bot
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'  # 6時間ごとにチェック（UTC）
+    - cron: '0 0,6,12,18 * * *'  # 日本時間0時、6時、12時、18時（UTC-9）
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    # 同じコミットに対して同時に複数のワークフローが実行されないようにする
+    concurrency: 
+      group: bot-${{ github.ref }}
+      cancel-in-progress: true
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Set timezone to Japan
+      run: |
+        sudo timedatectl set-timezone Asia/Tokyo
+        date
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Setup database directory
+      run: |
+        mkdir -p data backup
+        chmod 755 data backup
+    
+    - name: Pull latest database
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git pull origin main || true
+        
+        # バックアップを作成
+        if [ -f "data/thoughts.db" ]; then
+          echo "既存のデータベースをバックアップします"
+          cp data/thoughts.db data/thoughts.db.backup.$(date +%Y%m%d_%H%M%S)
+        fi
+        
+        # コンフリクト解消
+        if [ -f "thoughts.db" ] && [ -f "data/thoughts.db" ]; then
+          echo "データベースのコンフリクトを検出、マージします"
+          # より新しいファイルを使用
+          if [ "data/thoughts.db" -nt "thoughts.db" ]; then
+            echo "data/thoughts.db を使用します（より新しい）"
+            cp data/thoughts.db thoughts.db
+          else
+            echo "thoughts.db を使用します（より新しい）"
+            cp thoughts.db data/
+          fi
+        elif [ -f "data/thoughts.db" ]; then
+          echo "data/thoughts.db のみ存在します"
+          cp data/thoughts.db thoughts.db
+        elif [ -f "thoughts.db" ]; then
+          echo "thoughts.db のみ存在します"
+          mkdir -p data
+          cp thoughts.db data/
+        else
+          echo "データベースが存在しません"
+          mkdir -p data
+        fi
+    
+    - name: Check if database exists
+      run: |
+        # データベースの状態を確認
+        if [ -f "data/thoughts.db" ]; then
+          echo "既存のデータベースサイズ: $(wc -c < data/thoughts.db) bytes"
+          if [ -s "data/thoughts.db" ]; then
+            echo "✅ 既存のデータベースを使用します（データあり）"
+            
+            # データベースにデータがあるか確認
+            sqlite3 data/thoughts.db "SELECT COUNT(*) FROM thoughts;" > /tmp/db_count.txt 2>/dev/null || echo "0" > /tmp/db_count.txt
+            DB_COUNT=$(cat /tmp/db_count.txt)
+            echo "📊 データベースの投稿数: $DB_COUNT"
+            
+            if [ "$DB_COUNT" -gt 0 ]; then
+              echo "✅ データベースにデータが存在します。既存データを保護します。"
+              # 既存データを保護（上書きしない）
+              if [ -f "thoughts.db" ]; then
+                echo "⚠️ thoughts.db は無視します（既存データを保護）"
+                rm -f thoughts.db
+              fi
+            else
+              echo "⚠️ データベースは空です"
+              if [ -f "thoughts.db" ] && [ -s "thoughts.db" ]; then
+                echo "🔄 thoughts.db にデータがあるため、そちらを使用します"
+                cp thoughts.db data/thoughts.db
+              fi
+            fi
+          else
+            echo "⚠️ 既存のデータベースは空です"
+            if [ -f "thoughts.db" ] && [ -s "thoughts.db" ]; then
+              echo "🔄 thoughts.db にデータがあるため、そちらを使用します"
+              cp thoughts.db data/thoughts.db
+            else
+              echo "📝 新規データベースを作成します"
+              touch data/thoughts.db
+            fi
+          fi
+        else
+          echo "📝 データベースが存在しません"
+          if [ -f "thoughts.db" ] && [ -s "thoughts.db" ]; then
+            echo "🔄 thoughts.db を使用します"
+            mkdir -p data
+            cp thoughts.db data/thoughts.db
+          else
+            echo "📝 新規データベースを作成します"
+            mkdir -p data
+            touch data/thoughts.db
+          fi
+        fi
+        
+        # 最終的なデータベース状態を確認
+        if [ -f "data/thoughts.db" ]; then
+          echo "📊 最終データベースサイズ: $(wc -c < data/thoughts.db) bytes"
+          if [ -s "data/thoughts.db" ]; then
+            sqlite3 data/thoughts.db "SELECT COUNT(*) FROM thoughts;" > /tmp/final_count.txt 2>/dev/null || echo "0" > /tmp/final_count.txt
+            FINAL_COUNT=$(cat /tmp/final_count.txt)
+            echo "📊 最終投稿数: $FINAL_COUNT"
+          else
+            echo "⚠️ 最終データベースは空です"
+          fi
+        fi
+    
+    - name: Check if bot is running
+      id: check_bot
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
+      run: |
+        # 既存の実行中のワークフローをチェック
+        RUNNING_JOBS=$(curl -s -H "Authorization: token ${{ github.token }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress" | \
+          jq -r '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id')
+        
+        if [ -z "$RUNNING_JOBS" ]; then
+          echo "ボットが実行されていないため、起動します"
+          echo "RUN_BOT=true" >> $GITHUB_ENV
+        else
+          echo "ボットは既に実行中です"
+          echo "RUN_BOT=false" >> $GITHUB_ENV
+        fi
+    
+    - name: Run bot
+      if: env.RUN_BOT == 'true'
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
+      run: |
+        # データベースをdataディレクトリに移動
+        if [ -f "thoughts.db" ]; then
+          mv thoughts.db data/
+        fi
+        
+        # ボット起動時にデータベースパスを指定
+        export DB_PATH="data/thoughts.db"
+        
+        # 既存のプロセスを終了
+        pkill -f "python.*bot.py" || true
+        
+        # ボットを起動
+        nohup python bot.py > bot.log 2>&1 &
+        echo $! > bot.pid
+        
+        # 起動を待つ
+        sleep 10
+        
+        # ログを表示
+        cat bot.log
+        
+        # プロセスが実行中か確認
+        if ! ps -p $(cat bot.pid) > /dev/null; then
+          echo "ボットの起動に失敗しました"
+          cat bot.log
+          exit 1
+        fi
+        
+        echo "ボットが正常に起動しました"
+        
+        # 無限ループで待機
+        while true; do
+          # ボットがまだ実行中か確認
+          if ! ps -p $(cat bot.pid) > /dev/null; then
+            echo "ボットが終了しました。再起動します..."
+            # 再起動
+            export DB_PATH="data/thoughts.db"
+            nohup python bot.py > bot.log 2>&1 &
+            echo $! > bot.pid
+            sleep 10
+          fi
+          # 1分ごとにチェック
+          sleep 60
+        done
+    
+    - name: Commit database changes
+      if: always()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # データベースが存在し、変更がある場合のみコミット
+        if [ -f "data/thoughts.db" ]; then
+          # 元の場所にもコピー
+          cp data/thoughts.db thoughts.db
+          
+          # 変更があるかチェック
+          if ! git diff --quiet data/thoughts.db thoughts.db; then
+            git add data/thoughts.db thoughts.db
+            
+            # コミットをリトライ
+            for i in {1..3}; do
+              if git commit -m "🗄️ Update database - $(date '+%Y-%m-%d %H:%M:%S')"; then
+                echo "✅ データベースをコミットしました (試行 $i)"
+                break
+              else
+                echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
+                git pull --rebase origin main || true
+                sleep 5
+              fi
+            done
+            
+            # プッシュをリトライ
+            for i in {1..3}; do
+              if git push origin main; then
+                echo "✅ データベースをプッシュしました (試行 $i)"
+                break
+              else
+                echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
+                sleep 10
+              fi
+            done
+          else
+            echo "ℹ️ データベースに変更はありません"
+          fi
+        fi
+    
+    - name: Show logs
+      if: always()
+      run: |
+        if [ -f bot.log ]; then
+          echo "=== 最終ログ ==="
+          echo "=== DEBUGログを含む全ログ ==="
+          grep -E "(DEBUG|ERROR|WARNING)" bot.log || echo "DEBUGログが見つかりません"
+          echo "=== 最終50行 ==="
+          tail -n 50 bot.log
+        fi
+        if [ -f data/thoughts.db ]; then
+          echo "=== データベース情報 ==="
+          ls -la data/
+          sqlite3 data/thoughts.db "SELECT COUNT(*) FROM thoughts;" || echo "データベースが存在しません"
+          echo "=== 最近の投稿 ==="
+          sqlite3 data/thoughts.db "SELECT id, is_anonymous, is_private, created_at FROM thoughts ORDER BY created_at DESC LIMIT 5;" || echo "投稿データが取得できません"
+        fi
