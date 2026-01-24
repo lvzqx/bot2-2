@@ -171,6 +171,9 @@
 2026-01-25 04:11:46,517 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
 2026-01-25 04:11:48,520 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
 2026-01-25 04:11:50,524 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
-_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
-2026-01-25 04:11:48,520 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
-2026-01-25 04:11:50,524 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 04:11:51,271 - cogs.thoughts.github_sync - INFO - 🔥 強制コミットでGitHubに保存しました: delete post
+2026-01-25 04:11:51,271 - cogs.thoughts.delete - INFO - GitHub同期結果: 🔥 強制コミットでGitHubに保存しました: delete post
+[2026-01-25 04:16:29] [INFO    ] discord.gateway: Shard ID None has successfully RESUMED session 5fb5bc6b55429df919d0aa2820a25078.
+2026-01-25 04:16:29,819 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 5fb5bc6b55429df919d0aa2820a25078.
+�でGitHubに保存しました: delete post
+2026-01-25 04:16:29,819 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 5fb5bc6b55429df919d0aa2820a25078.
