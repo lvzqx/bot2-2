@@ -60,6 +60,41 @@ class DatabaseMixin:
     def _ensure_database_exists(self):
         """データベースとテーブルが存在することを確認"""
         try:
+            # データベースファイルが存在するか確認
+            db_exists = os.path.exists(self.db_path)
+            
+            if db_exists:
+                # 既存データベースの場合はデータの存在を確認
+                with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+                    cursor = conn.cursor()
+                    
+                    # thoughtsテーブルの存在とデータ確認
+                    cursor.execute("""
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name='thoughts'
+                    """)
+                    thoughts_table = cursor.fetchone()
+                    
+                    if thoughts_table:
+                        # テーブルが存在する場合はデータ数を確認
+                        cursor.execute("SELECT COUNT(*) FROM thoughts")
+                        data_count = cursor.fetchone()[0]
+                        
+                        if data_count > 0:
+                            logger.info(f"✅ 既存データベースを使用します（投稿数: {data_count}）")
+                            # パフォーマンス最適化のみ実行
+                            cursor.execute('PRAGMA journal_mode=WAL')
+                            cursor.execute('PRAGMA synchronous=NORMAL')
+                            cursor.execute('PRAGMA cache_size=-2000')
+                            conn.commit()
+                            return
+                        else:
+                            logger.info("📝 データベースは空ですが、テーブルは存在します")
+                    else:
+                        logger.info("🔧 thoughtsテーブルが存在しません")
+            
+            # 新規作成またはテーブルが存在しない場合
+            logger.info("🆕 データベースを初期化します")
             with sqlite3.connect(self.db_path, timeout=30.0) as conn:
                 cursor = conn.cursor()
                 
@@ -85,7 +120,7 @@ class DatabaseMixin:
                         post_id INTEGER PRIMARY KEY,
                         message_id TEXT NOT NULL,
                         channel_id TEXT NOT NULL,
-                        user_id INTEGER,
+                        user_id,
                         FOREIGN KEY (post_id) REFERENCES thoughts (id) ON DELETE CASCADE
                     )
                 ''')
@@ -101,6 +136,7 @@ class DatabaseMixin:
                 cursor.execute('PRAGMA cache_size=-2000')
                 
                 conn.commit()
+                logger.info("✅ データベースの初期化が完了しました")
                 
         except sqlite3.Error as e:
             logger.error(f"データベース初期化エラー: {e}")
