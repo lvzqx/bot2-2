@@ -159,6 +159,18 @@
 2026-01-25 04:09:52,274 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
 2026-01-25 04:09:54,277 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
 2026-01-25 04:09:56,281 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 04:09:57,318 - cogs.thoughts.github_sync - INFO - 🔥 強制コミットでGitHubに保存しました: edit post
+2026-01-25 04:11:41,390 - cogs.thoughts.delete - INFO - delete コマンドが呼び出されました。ユーザー: m.s.k_vii, 投稿ID: 1
+2026-01-25 04:11:41,587 - cogs.thoughts.delete - INFO - message_references columns: ['post_id', 'message_id', 'channel_id', 'user_id']
+2026-01-25 04:11:41,587 - cogs.thoughts.delete - INFO - クエリ結果: <sqlite3.Row object at 0x7fd2406bba30>
+2026-01-25 04:11:41,587 - cogs.thoughts.delete - INFO - 投稿を検出: post_id=1, channel_id=1457611087561101332, message_id=1464694041210781777
+2026-01-25 04:11:42,275 - cogs.thoughts.delete - INFO - メッセージ 1464694041210781777 を削除しました
+2026-01-25 04:11:42,276 - cogs.thoughts.delete - INFO - 投稿ID 1 をデータベースから削除しました
+2026-01-25 04:11:42,510 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 1/5): 
+2026-01-25 04:11:44,513 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 2/5): 
+2026-01-25 04:11:46,517 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
+2026-01-25 04:11:48,520 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 04:11:50,524 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
 _sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
-2026-01-25 04:09:54,277 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
-2026-01-25 04:09:56,281 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 04:11:48,520 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 04:11:50,524 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
