@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'  # 6時間ごとにチェック（UTC）
+    - cron: '*/5 * * * *'  # 5分ごとにチェック（UTC）
 
 jobs:
   run-bot:
