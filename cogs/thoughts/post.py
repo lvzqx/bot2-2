@@ -632,7 +632,8 @@ class Post(commands.Cog, DatabaseMixin):
                     
                     # GitHubに保存する処理
                     from .github_sync import sync_to_github
-                    await sync_to_github("new post", interaction.user.name, post_id)
+                    github_result = await sync_to_github("new post", interaction.user.name, post_id)
+                    logger.info(f"GitHub同期結果: {github_result}")
                 
             except Exception as e:
                 logger.error(f"フォーム送信中にエラーが発生しました: {e}", exc_info=True)

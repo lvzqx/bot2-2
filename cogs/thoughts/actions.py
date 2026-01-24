@@ -136,7 +136,8 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
-            await sync_to_github("like", interaction.user.name, post_id)
+            github_result = await sync_to_github("like", interaction.user.name, post_id)
+            logger.info(f"GitHub同期結果: {github_result}")
             
         except ValueError:
             await interaction.followup.send(
