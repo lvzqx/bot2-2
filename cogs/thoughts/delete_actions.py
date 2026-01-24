@@ -38,7 +38,7 @@ class DeleteActions(commands.Cog):
             except:
                 logger.error("いいね取り消しコマンドのエラーメッセージ送信に失敗しました")
 
-    @app_commands.command(name="delete_reply", description="🗑️ リプライを削除")
+    @app_commands.command(name="deletereply", description="🗑️ リプライを削除")
     async def delete_reply_command(self, interaction: Interaction) -> None:
         """リプライ削除コマンド"""
         try:
