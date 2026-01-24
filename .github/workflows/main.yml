@@ -12,9 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     
     # 同じコミットに対して同時に複数のワークフローが実行されないようにする
+    # ただし、データベース同期は確実に行う必要があるため、キャンセルは無効化
     concurrency: 
       group: bot-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     
     steps:
     - uses: actions/checkout@v3
@@ -253,6 +254,7 @@ jobs:
         fi
     
     - name: Commit database changes
+      if: always()  # ボットがクラッシュしても必ず実行
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
