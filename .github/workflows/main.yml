@@ -56,10 +56,27 @@ jobs:
         
         # コンフリクト解消
         if [ -f "bot.db" ]; then
-          echo "✅ bot.db を使用します"
+          echo "✅ 既存のbot.db を使用します"
         else
-          echo "📝 新規データベースを作成します"
-          touch bot.db
+          echo "⚠️ bot.dbが見つかりません"
+          echo "🔄 GitHubから取得を試みます..."
+          git pull origin main || echo "⚠️ GitHubからの取得に失敗しました"
+          
+          if [ -f "bot.db" ]; then
+            echo "✅ GitHubからbot.dbを取得しました"
+          else
+            echo "⚠️ GitHubにもbot.dbがありません"
+            echo "� バックアップから復元を試みます..."
+            if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
+              LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
+              cp "$LATEST_BACKUP" bot.db
+              echo "✅ バックアップから復元しました: $LATEST_BACKUP"
+            else
+              echo "❌ バックアップもありません"
+              echo "� 最終手段として空のデータベースを作成します"
+              touch bot.db
+            fi
+          fi
         fi
     
     - name: Check if database exists
@@ -109,9 +126,25 @@ jobs:
             # 上記の復元ロジックで処理されるため、ここでは何もしない
           fi
         else
-          echo "📝 データベースが存在しません"
-          echo "📝 新規データベースを作成します"
-          touch bot.db
+          echo "⚠️ データベースが存在しません"
+          echo "🔄 GitHubから取得を試みます..."
+          git pull origin main || echo "⚠️ GitHubからの取得に失敗しました"
+          
+          if [ -f "bot.db" ]; then
+            echo "✅ GitHubからデータベースを取得しました"
+          else
+            echo "⚠️ GitHubにもデータベースがありません"
+            echo "🔄 バックアップから復元を試みます..."
+            if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
+              LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
+              cp "$LATEST_BACKUP" bot.db
+              echo "✅ バックアップから復元しました: $LATEST_BACKUP"
+            else
+              echo "❌ バックアップもありません"
+              echo "📝 最終手段として空のデータベースを作成します"
+              touch bot.db
+            fi
+          fi
         fi
         
         # 最終的なデータベース状態を確認
