@@ -290,24 +290,55 @@ class RestoreMessages(commands.Cog):
             
             try:
                 # バックアップファイルをgit add
+                result = subprocess.run(['git', 'add', backup_path], 
+                             capture_output=True, text=True, check=False)
+                
+                # バックアップファイルにタイムスタンプを更新して強制変更
+                os.utime(backup_path)
+                
+                # バックアップファイルにダミーのメタデータを追加して確実に変更を検知させる
+                import sqlite3
+                conn = sqlite3.connect(backup_path)
+                cursor = conn.cursor()
+                
+                # backup_metadataテーブルにメタ情報を記録
+                cursor.execute('CREATE TABLE IF NOT EXISTS backup_metadata (timestamp TEXT, action TEXT)')
+                cursor.execute('INSERT OR REPLACE INTO backup_metadata (timestamp, action) VALUES (?, ?)', 
+                              (datetime.now().isoformat(), 'manual_backup'))
+                conn.commit()
+                conn.close()
+                
+                # タイムスタンプ更新後に再度git add
                 subprocess.run(['git', 'add', backup_path], 
-                             capture_output=True, text=True, check=True)
+                             capture_output=True, text=True, check=False)
                 
                 # コミットメッセージ
                 commit_message = f"💾 Manual backup - {timestamp}"
                 
-                # git commit
-                subprocess.run(['git', 'commit', '-m', commit_message], 
-                             capture_output=True, text=True, check=True)
+                # git commit（変更がない場合は無視）
+                result = subprocess.run(['git', 'commit', '-m', commit_message], 
+                             capture_output=True, text=True, check=False)
                 
-                # git push
-                subprocess.run(['git', 'push', 'origin', 'main'], 
-                             capture_output=True, text=True, check=True)
+                # git push（リトライ付き）
+                max_retries = 3
+                for attempt in range(max_retries):
+                    result = subprocess.run(['git', 'push', 'origin', 'main'], 
+                                 capture_output=True, text=True, check=False)
+                    
+                    if result.returncode == 0:
+                        logger.info(f"バックアップファイルをGitHubに保存しました: {backup_path}")
+                        break
+                    else:
+                        if "nothing to push" in result.stderr.lower():
+                            logger.info(f"プッシュする変更はありませんでした: {backup_path}")
+                            break
+                        elif attempt < max_retries - 1:
+                            logger.warning(f"GitHubプッシュ失敗（リトライ {attempt + 1}/{max_retries}）: {result.stderr}")
+                            import time
+                            time.sleep(2)  # 2秒待機
+                        else:
+                            logger.warning(f"GitHubプッシュ失敗（最終）: {result.stderr}")
                 
-                logger.info(f"バックアップファイルをGitHubに保存しました: {backup_path}")
-                
-            except subprocess.CalledProcessError as git_error:
-                logger.warning(f"バックアップのGitHub保存に失敗: {git_error}")
             except Exception as git_error:
                 logger.warning(f"バックアップのGitHub保存エラー: {git_error}")
             
