@@ -282,11 +282,40 @@ class MessageRestore(commands.Cog):
                 'readable_time': datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
             }
             
+            # GitHubに保存する処理
+            github_status = ""
+            try:
+                import subprocess
+                
+                # git add
+                subprocess.run(['git', 'add', backup_path], 
+                             capture_output=True, text=True, check=True)
+                
+                # git commit
+                commit_message = f"💾 Manual backup - {timestamp}"
+                subprocess.run(['git', 'commit', '-m', commit_message], 
+                             capture_output=True, text=True, check=True)
+                
+                # git push
+                subprocess.run(['git', 'push', 'origin', 'main'], 
+                             capture_output=True, text=True, check=True)
+                
+                github_status = "✅ GitHubにも保存しました"
+                logger.info(f"手動バックアップをGitHubに保存しました: {backup_path}")
+                
+            except subprocess.CalledProcessError as git_error:
+                github_status = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
+                logger.warning(f"GitHub保存失敗: {git_error}")
+            except Exception as git_error:
+                github_status = f"⚠️ GitHub保存エラー: {str(git_error)}"
+                logger.warning(f"GitHub保存エラー: {git_error}")
+            
             await interaction.followup.send(
                 f"✅ データベースをバックアップしました。\n"
                 f"📁 バックアップファイル: {backup_path}\n"
                 f"📊 サイズ: {backup_info['size']} bytes\n"
-                f"🕐 作成時刻: {backup_info['readable_time']}",
+                f"🕐 作成時刻: {backup_info['readable_time']}\n"
+                f"{github_status}",
                 ephemeral=True
             )
             
