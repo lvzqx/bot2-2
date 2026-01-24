@@ -257,6 +257,54 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
+        # bot.dbの変更をチェック
+        DB_CHANGED=false
+        if [ -f "bot.db" ]; then
+          # bot.dbに変更があるかチェック
+          if ! git diff --quiet "bot.db"; then
+            DB_CHANGED=true
+            echo "📝 bot.dbに変更があります"
+          else
+            # 強制的に変更を検知させるための処理
+            sqlite3 bot.db "CREATE TABLE IF NOT EXISTS action_sync_marker (timestamp TEXT);"
+            sqlite3 bot.db "INSERT OR REPLACE INTO action_sync_marker (timestamp) VALUES (datetime('now'));"
+            DB_CHANGED=true
+            echo "📝 bot.dbに強制変更マーカーを追加"
+          fi
+        fi
+        
+        # bot.dbが変更されている場合のみコミット
+        if [ "$DB_CHANGED" = true ]; then
+          echo "📝 bot.dbをGitHubに保存します..."
+          git add bot.db
+          
+          # コミットをリトライ
+          for i in {1..3}; do
+            if git commit -m "🔄 Auto-sync bot.db - $(date '+%Y-%m-%d %H:%M:%S')"; then
+              echo "✅ bot.dbをコミットしました (試行 $i)"
+              break
+            else
+              echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
+              git pull --rebase origin main || true
+              sleep 5
+            fi
+          done
+          
+          # プッシュをリトライ
+          for i in {1..3}; do
+            if git push origin main; then
+              echo "✅ bot.dbをプッシュしました (試行 $i)"
+              break
+            else
+              echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
+              git pull --rebase origin main || true
+              sleep 5
+            fi
+          done
+        else
+          echo "ℹ️ bot.dbに変更はありません"
+        fi
+        
         # バックアップファイルの変更をチェック
         BACKUP_CHANGED=false
         if [ -d "backup" ]; then
