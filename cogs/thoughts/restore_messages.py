@@ -75,7 +75,13 @@ class BackupRestoreView(ui.View):
             
             # ボタンを無効化
             button.disabled = True
-            await interaction.message.edit(view=self)
+            try:
+                await interaction.message.edit(view=self)
+            except discord.NotFound:
+                # メッセージが見つからない場合は無視
+                pass
+            except Exception as e:
+                logger.warning(f"ボタン無効化エラー: {e}")
             
         except Exception as e:
             await interaction.followup.send(
@@ -86,10 +92,23 @@ class BackupRestoreView(ui.View):
     @ui.button(label="❌ キャンセル", style=discord.ButtonStyle.secondary, custom_id="cancel_restore")
     async def cancel_button(self, interaction: discord.Interaction, button: ui.Button):
         """キャンセルボタン"""
-        await interaction.response.edit_message(
-            content="バックアップ作成完了。復元はキャンセルされました。",
-            view=None
-        )
+        try:
+            await interaction.response.edit_message(
+                content="バックアップ作成完了。復元はキャンセルされました。",
+                view=None
+            )
+        except discord.NotFound:
+            # メッセージが見つからない場合はfollowupで送信
+            await interaction.followup.send(
+                "バックアップ作成完了。復元はキャンセルされました。",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.warning(f"キャンセルメッセージ編集エラー: {e}")
+            await interaction.followup.send(
+                "バックアップ作成完了。復元はキャンセルされました。",
+                ephemeral=True
+            )
 
 class MessageRestore(commands.Cog):
     """メッセージ復元用Cog"""
