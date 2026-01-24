@@ -1,0 +1,179 @@
+2026-01-25 03:50:39,415 - __main__ - DEBUG - DEBUGモードが有効です
+2026-01-25 03:50:39,416 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-01-25 03:50:39,417 - __main__ - INFO - データベースパス: /home/runner/work/bot2-2/bot2-2/bot.db
+2026-01-25 03:50:39,417 - __main__ - INFO - 📝 データベースは空ですが、テーブルは存在します
+2026-01-25 03:50:39,417 - __main__ - INFO - 🆕 データベースを初期化します
+2026-01-25 03:50:39,418 - __main__ - INFO - ✅ データベースの初期化が完了しました
+2026-01-25 03:50:39,418 - asyncio - DEBUG - Using selector: EpollSelector
+[2026-01-25 03:50:39] [INFO    ] discord.client: logging in using static token
+2026-01-25 03:50:39,418 - discord.client - INFO - logging in using static token
+2026-01-25 03:50:39,872 - __main__ - INFO - 🔄 拡張機能の読み込みを開始します...
+2026-01-25 03:50:39,881 - bot - DEBUG - DEBUGモードが有効です
+2026-01-25 03:50:39,882 - bot - INFO - データベースパス: /home/runner/work/bot2-2/bot2-2/bot.db
+2026-01-25 03:50:39,882 - bot - INFO - 📝 データベースは空ですが、テーブルは存在します
+2026-01-25 03:50:39,882 - bot - INFO - 🆕 データベースを初期化します
+2026-01-25 03:50:39,882 - bot - INFO - ✅ データベースの初期化が完了しました
+2026-01-25 03:50:39,883 - cogs.thoughts.post - INFO - Post cog が初期化されました
+2026-01-25 03:50:39,883 - cogs.thoughts.post - INFO - Post cog が読み込まれました
+2026-01-25 03:50:39,883 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.post
+2026-01-25 03:50:39,887 - bot - INFO - データベースパス: /home/runner/work/bot2-2/bot2-2/bot.db
+2026-01-25 03:50:39,887 - bot - INFO - 📝 データベースは空ですが、テーブルは存在します
+2026-01-25 03:50:39,887 - bot - INFO - 🆕 データベースを初期化します
+2026-01-25 03:50:39,887 - bot - INFO - ✅ データベースの初期化が完了しました
+2026-01-25 03:50:39,887 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.delete
+2026-01-25 03:50:39,890 - bot - INFO - データベースパス: /home/runner/work/bot2-2/bot2-2/bot.db
+2026-01-25 03:50:39,890 - bot - INFO - 📝 データベースは空ですが、テーブルは存在します
+2026-01-25 03:50:39,890 - bot - INFO - 🆕 データベースを初期化します
+2026-01-25 03:50:39,891 - bot - INFO - ✅ データベースの初期化が完了しました
+2026-01-25 03:50:39,891 - cogs.thoughts.list - INFO - List cog が初期化されました
+2026-01-25 03:50:39,891 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.list
+2026-01-25 03:50:39,898 - cogs.thoughts.search - INFO - Search cog が初期化されました
+2026-01-25 03:50:39,898 - cogs.thoughts.search - INFO - Search cog がセットアップされました
+2026-01-25 03:50:39,898 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.search
+2026-01-25 03:50:39,901 - cogs.thoughts.actions - INFO - Actions cog のセットアップを開始します...
+2026-01-25 03:50:39,901 - cogs.thoughts.actions - INFO - Actions cog が初期化されました
+2026-01-25 03:50:39,901 - cogs.thoughts.actions - INFO - Actions cog がセットアップされました
+2026-01-25 03:50:39,901 - cogs.thoughts.actions - INFO - ✅ /like コマンドが正常に登録されました
+2026-01-25 03:50:39,901 - cogs.thoughts.actions - INFO - ✅ /reply コマンドが正常に登録されました
+2026-01-25 03:50:39,901 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.actions
+2026-01-25 03:50:39,904 - cogs.thoughts.delete_actions - INFO - DeleteActions cog のセットアップを開始します...
+2026-01-25 03:50:39,905 - cogs.thoughts.delete_actions - INFO - DeleteActions cog が初期化されました
+2026-01-25 03:50:39,905 - cogs.thoughts.delete_actions - INFO - DeleteActions cog がセットアップされました
+2026-01-25 03:50:39,905 - cogs.thoughts.delete_actions - INFO - ✅ /unlike コマンドが正常に登録されました
+2026-01-25 03:50:39,905 - cogs.thoughts.delete_actions - INFO - ✅ /deletereply コマンドが正常に登録されました
+2026-01-25 03:50:39,905 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.delete_actions
+2026-01-25 03:50:39,907 - cogs.thoughts.edit - INFO - Edit cog がセットアップされました
+2026-01-25 03:50:39,907 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.edit
+2026-01-25 03:50:39,909 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.edit_reply
+2026-01-25 03:50:39,914 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.restore_messages
+2026-01-25 03:50:39,916 - bot - INFO - データベースパス: /home/runner/work/bot2-2/bot2-2/bot.db
+2026-01-25 03:50:39,916 - bot - INFO - 📝 データベースは空ですが、テーブルは存在します
+2026-01-25 03:50:39,917 - bot - INFO - 🆕 データベースを初期化します
+2026-01-25 03:50:39,917 - bot - INFO - ✅ データベースの初期化が完了しました
+2026-01-25 03:50:39,917 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.data_recovery
+2026-01-25 03:50:39,918 - bot - INFO - データベースパス: /home/runner/work/bot2-2/bot2-2/bot.db
+2026-01-25 03:50:39,919 - bot - INFO - 📝 データベースは空ですが、テーブルは存在します
+2026-01-25 03:50:39,919 - bot - INFO - 🆕 データベースを初期化します
+2026-01-25 03:50:39,920 - bot - INFO - ✅ データベースの初期化が完了しました
+2026-01-25 03:50:39,920 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.user_fix
+2026-01-25 03:50:39,921 - __main__ - INFO - ✅ 拡張機能を読み込みました: cogs.thoughts.help
+2026-01-25 03:50:39,921 - __main__ - INFO - ✅ 読み込みに成功した拡張機能 (12/12):
+  • cogs.thoughts.post
+  • cogs.thoughts.delete
+  • cogs.thoughts.list
+  • cogs.thoughts.search
+  • cogs.thoughts.actions
+  • cogs.thoughts.delete_actions
+  • cogs.thoughts.edit
+  • cogs.thoughts.edit_reply
+  • cogs.thoughts.restore_messages
+  • cogs.thoughts.data_recovery
+  • cogs.thoughts.user_fix
+  • cogs.thoughts.help
+2026-01-25 03:50:39,921 - __main__ - INFO - 同期前の登録コマンド数: 20
+2026-01-25 03:50:39,921 - __main__ - INFO - 同期前の登録コマンド: {'restore_messages', 'search', 'list', 'reply', 'like', 'cleanup_orphaned', 'backup_database', 'assign_user', 'help', 'deletereply', 'recover_from_messages', 'post', 'unlike', 'edit_reply', 'list_posts_without_user', 'restore_backup', 'edit', 'check_database', 'delete', 'list_backups'}
+2026-01-25 03:50:39,921 - __main__ - INFO - Post cog は正常に読み込まれています
+2026-01-25 03:50:39,921 - __main__ - INFO - Post cog のメソッド: []
+2026-01-25 03:50:40,193 - __main__ - INFO - ✅ コマンドを同期しました: 20 件
+2026-01-25 03:50:40,193 - __main__ - INFO - 同期後の登録コマンド数: 20
+2026-01-25 03:50:40,193 - __main__ - INFO - 登録されているコマンド一覧:
+2026-01-25 03:50:40,193 - __main__ - INFO -   • /post - 📝 投稿を作成
+2026-01-25 03:50:40,193 - __main__ - INFO -   • /delete - 🗑️ 投稿削除
+2026-01-25 03:50:40,193 - __main__ - INFO -   • /list - 📜 投稿一覧
+2026-01-25 03:50:40,193 - __main__ - INFO -   • /search - 🔍 投稿を検索
+2026-01-25 03:50:40,193 - __main__ - INFO -   • /like - ❤️ いいねする
+2026-01-25 03:50:40,193 - __main__ - INFO -   • /reply - 💬 リプライする
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /unlike - ❌ いいねを削除
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /deletereply - 🗑️ リプライを削除
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /edit - 📝 投稿を編集
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /edit_reply - 💬 リプライを編集
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /restore_messages - メッセージ参照を整理・復元します
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /backup_database - データベースをバックアップします
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /list_backups - バックアップ一覧を表示します
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /restore_backup - バックアップから復元します
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /check_database - データベースの整合性をチェックします
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /cleanup_orphaned - 孤立した参照をクリーンアップします
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /recover_from_messages - Discordメッセージからデータベースを復元します
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /assign_user - 📝 投稿に正しい投稿者を割り当てます
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /list_posts_without_user - 📋 user_idが未設定の投稿一覧を表示します
+2026-01-25 03:50:40,194 - __main__ - INFO -   • /help - ❔利用可能なコマンドを表示します
+[2026-01-25 03:50:40] [INFO    ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 5fb5bc6b55429df919d0aa2820a25078).
+2026-01-25 03:50:40,744 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 5fb5bc6b55429df919d0aa2820a25078).
+2026-01-25 03:50:42,758 - __main__ - INFO - ✅ ログインしました: 何かを吐く#5372 (ID: 1456722461184888873)
+2026-01-25 03:50:42,758 - __main__ - INFO - ------
+2026-01-25 03:50:42,758 - __main__ - INFO - 読み込まれている拡張機能:
+2026-01-25 03:50:42,758 - __main__ - INFO -   • cogs.thoughts.post
+2026-01-25 03:50:42,758 - __main__ - INFO -   • cogs.thoughts.delete
+2026-01-25 03:50:42,758 - __main__ - INFO -   • cogs.thoughts.list
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.search
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.actions
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.delete_actions
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.edit
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.edit_reply
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.restore_messages
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.data_recovery
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.user_fix
+2026-01-25 03:50:42,759 - __main__ - INFO -   • cogs.thoughts.help
+2026-01-25 03:50:42,759 - __main__ - INFO - 現在登録されているコマンド数: 20
+2026-01-25 03:50:42,759 - __main__ - INFO - 登録されているコマンド一覧:
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /post - 📝 投稿を作成
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /delete - 🗑️ 投稿削除
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /list - 📜 投稿一覧
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /search - 🔍 投稿を検索
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /like - ❤️ いいねする
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /reply - 💬 リプライする
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /unlike - ❌ いいねを削除
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /deletereply - 🗑️ リプライを削除
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /edit - 📝 投稿を編集
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /edit_reply - 💬 リプライを編集
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /restore_messages - メッセージ参照を整理・復元します
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /backup_database - データベースをバックアップします
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /list_backups - バックアップ一覧を表示します
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /restore_backup - バックアップから復元します
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /check_database - データベースの整合性をチェックします
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /cleanup_orphaned - 孤立した参照をクリーンアップします
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /recover_from_messages - Discordメッセージからデータベースを復元します
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /assign_user - 📝 投稿に正しい投稿者を割り当てます
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /list_posts_without_user - 📋 user_idが未設定の投稿一覧を表示します
+2026-01-25 03:50:42,759 - __main__ - INFO -   • /help - ❔利用可能なコマンドを表示します
+2026-01-25 03:50:43,341 - cogs.thoughts.delete - INFO - delete コマンドが呼び出されました。ユーザー: m.s.k_vii, 投稿ID: 2
+2026-01-25 03:50:43,591 - cogs.thoughts.delete - INFO - message_references columns: ['post_id', 'message_id', 'channel_id', 'user_id']
+2026-01-25 03:50:43,591 - cogs.thoughts.delete - INFO - クエリ結果: None
+2026-01-25 03:51:02,274 - cogs.thoughts.post - INFO - post コマンドが呼び出されました。ユーザー: m.s.k_vii
+2026-01-25 03:51:02,274 - cogs.thoughts.post - INFO - モーダルのインスタンス化に成功しました
+2026-01-25 03:51:02,488 - cogs.thoughts.post - INFO - モーダルを表示しました
+2026-01-25 03:51:12,200 - cogs.thoughts.post - INFO - user_idカラムは既に存在します
+2026-01-25 03:51:12,454 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 1/5): 
+2026-01-25 03:51:14,457 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 2/5): 
+2026-01-25 03:51:16,461 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
+2026-01-25 03:51:18,464 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 03:51:20,467 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 03:51:21,046 - cogs.thoughts.github_sync - INFO - 🔥 強制コミットでGitHubに保存しました: new post
+2026-01-25 03:51:31,401 - cogs.thoughts.restore_messages - INFO - データベースをバックアップしました: backup/thoughts_backup_2026-01-25_03-51-31.db
+2026-01-25 03:51:32,003 - cogs.thoughts.restore_messages - INFO - バックアップファイルをGitHubに保存しました: backup/thoughts_backup_2026-01-25_03-51-31.db
+2026-01-25 03:52:07,459 - cogs.thoughts.restore_messages - INFO - データベース整合性チェック完了: 投稿1件, 参照1件, 問題0件
+2026-01-25 03:52:15,704 - cogs.thoughts.restore_messages - INFO - 孤立した参照をクリーンアップ: 0件削除
+2026-01-25 03:52:21,975 - cogs.thoughts.list - INFO - 投稿一覧の取得を開始: user_id=772268153370968117, limit=10
+2026-01-25 04:09:48,266 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 1/5): 
+2026-01-25 04:09:50,270 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 2/5): 
+2026-01-25 04:09:52,274 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
+2026-01-25 04:09:54,277 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 04:09:56,281 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 04:09:57,318 - cogs.thoughts.github_sync - INFO - 🔥 強制コミットでGitHubに保存しました: edit post
+2026-01-25 04:11:41,390 - cogs.thoughts.delete - INFO - delete コマンドが呼び出されました。ユーザー: m.s.k_vii, 投稿ID: 1
+2026-01-25 04:11:41,587 - cogs.thoughts.delete - INFO - message_references columns: ['post_id', 'message_id', 'channel_id', 'user_id']
+2026-01-25 04:11:41,587 - cogs.thoughts.delete - INFO - クエリ結果: <sqlite3.Row object at 0x7fd2406bba30>
+2026-01-25 04:11:41,587 - cogs.thoughts.delete - INFO - 投稿を検出: post_id=1, channel_id=1457611087561101332, message_id=1464694041210781777
+2026-01-25 04:11:42,275 - cogs.thoughts.delete - INFO - メッセージ 1464694041210781777 を削除しました
+2026-01-25 04:11:42,276 - cogs.thoughts.delete - INFO - 投稿ID 1 をデータベースから削除しました
+2026-01-25 04:11:42,510 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 1/5): 
+2026-01-25 04:11:44,513 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 2/5): 
+2026-01-25 04:11:46,517 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
+2026-01-25 04:11:48,520 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 04:11:50,524 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 04:11:51,271 - cogs.thoughts.github_sync - INFO - 🔥 強制コミットでGitHubに保存しました: delete post
+2026-01-25 04:11:51,271 - cogs.thoughts.delete - INFO - GitHub同期結果: 🔥 強制コミットでGitHubに保存しました: delete post
+[2026-01-25 04:16:29] [INFO    ] discord.gateway: Shard ID None has successfully RESUMED session 5fb5bc6b55429df919d0aa2820a25078.
+2026-01-25 04:16:29,819 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 5fb5bc6b55429df919d0aa2820a25078.
+�でGitHubに保存しました: delete post
+2026-01-25 04:16:29,819 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 5fb5bc6b55429df919d0aa2820a25078.
