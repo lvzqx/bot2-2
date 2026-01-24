@@ -68,12 +68,12 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
                              capture_output=True, text=True, check=False)
                 
                 if result.returncode == 0:
-                    success_msg = f"✅ GitHubに保存しました: {action_description}"
+                    success_msg = f" GitHubに保存しました: {action_description}"
                     logger.info(success_msg)
                     return success_msg
                 else:
                     if "nothing to push" in result.stderr.lower():
-                        success_msg = f"✅ GitHubに保存しました: {action_description}（プッシュ不要）"
+                        success_msg = f" GitHubに保存しました: {action_description}（プッシュ不要）"
                         logger.info(success_msg)
                         return success_msg
                     elif attempt < max_retries - 1:
@@ -81,12 +81,12 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
                         import time
                         time.sleep(2)  # 2秒待機
                     else:
-                        error_msg = f"⚠️ GitHub保存に失敗: {result.stderr.strip()}"
+                        error_msg = f" GitHub保存に失敗: {result.stderr.strip()}"
                         logger.warning(f"GitHub保存失敗: {result.stderr}")
                         return error_msg
             
         except subprocess.CalledProcessError as git_error:
-            error_msg = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
+            error_msg = f" GitHub保存に失敗: {git_error.stderr.strip()}"
             logger.warning(f"GitHub保存失敗: {git_error}")
             return error_msg
         
