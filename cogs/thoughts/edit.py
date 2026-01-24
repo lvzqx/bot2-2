@@ -215,8 +215,7 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
-            github_status = await sync_to_github("edit post", interaction.user.name, self.post_data['id'])
-            await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
+            await sync_to_github("edit post", interaction.user.name, self.post_data['id'])
             
         except Exception as e:
             logger.error(f"投稿編集中にエラーが発生しました: {e}")

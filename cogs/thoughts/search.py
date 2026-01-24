@@ -865,7 +865,7 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
-            github_status = await sync_to_github("feeling lucky reply", interaction.user.name, self.post['id'])
+            await sync_to_github("feeling lucky reply", interaction.user.name, self.post['id'])
             
             # チャンネル転送
             reply_channel = discord.utils.get(interaction.guild.text_channels, name="リプライ")
@@ -880,16 +880,14 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
                 await interaction.followup.send(
                     f"💬 **リプライを投稿しました！**\n\n"
                     f"投稿ID: {self.post['id']} に返信しました。\n"
-                    f"📢 「リプライ」チャンネルに投稿されました！\n"
-                    f"📁 バックアップ: {github_status}",
+                    f"📢 「リプライ」チャンネルに投稿されました！",
                     ephemeral=True
                 )
             else:
                 await interaction.followup.send(
                     f"💬 **リプライを投稿しました！**\n\n"
                     f"投稿ID: {self.post['id']} に返信しました。\n"
-                    f"※「リプライ」チャンネルが見つかりません\n"
-                    f"📁 バックアップ: {github_status}",
+                    f"※「リプライ」チャンネルが見つかりません",
                     ephemeral=True
                 )
             

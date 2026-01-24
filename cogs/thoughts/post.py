@@ -630,12 +630,7 @@ class Post(commands.Cog, DatabaseMixin):
                     
                     # GitHubに保存する処理
                     from .github_sync import sync_to_github
-                    github_status = await sync_to_github("new post", interaction.user.name, post_id)
-                    
-                    # GitHubステータスを埋め込みに追加
-                    embed.add_field(name="📁 バックアップ", value=github_status, inline=False)
-                    
-                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    await sync_to_github("new post", interaction.user.name, post_id)
                 
             except Exception as e:
                 logger.error(f"フォーム送信中にエラーが発生しました: {e}", exc_info=True)

@@ -36,25 +36,24 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
         subprocess.run(['git', 'add', bot_db_path], 
                      capture_output=True, text=True, check=True)
         
-        # 変更があるかチェック
-        result = subprocess.run(['git', 'diff', '--cached', '--quiet', bot_db_path], 
-                              capture_output=True, text=True)
-        
-        # 変更がない場合は何もしない
-        if result.returncode == 0:
-            return "ℹ️ 変更がないためGitHub保存は不要です"
-        
-        # git commit
-        subprocess.run(['git', 'commit', '-m', commit_message], 
-                     capture_output=True, text=True, check=True)
-        
-        # git push
-        subprocess.run(['git', 'push', 'origin', 'main'], 
-                     capture_output=True, text=True, check=True)
-        
-        success_msg = f"✅ GitHubに保存しました: {action_description}"
-        logger.info(success_msg)
-        return success_msg
+        # 必ずコミット（変更チェックなし）
+        try:
+            # git commit
+            subprocess.run(['git', 'commit', '-m', commit_message], 
+                         capture_output=True, text=True, check=True)
+            
+            # git push
+            subprocess.run(['git', 'push', 'origin', 'main'], 
+                         capture_output=True, text=True, check=True)
+            
+            success_msg = f"✅ GitHubに保存しました: {action_description}"
+            logger.info(success_msg)
+            return success_msg
+            
+        except subprocess.CalledProcessError as git_error:
+            error_msg = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"
+            logger.warning(f"GitHub保存失敗: {git_error}")
+            return error_msg
         
     except subprocess.CalledProcessError as git_error:
         error_msg = f"⚠️ GitHub保存に失敗: {git_error.stderr.strip()}"

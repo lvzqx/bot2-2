@@ -136,8 +136,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
-            github_status = await sync_to_github("like", interaction.user.name, post_id)
-            await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
+            await sync_to_github("like", interaction.user.name, post_id)
             
         except ValueError:
             await interaction.followup.send(
@@ -315,8 +314,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                             
                             # GitHubに保存する処理
                             from .github_sync import sync_to_github
-                            github_status = await sync_to_github("reply", interaction.user.name, post_id)
-                            await interaction.followup.send(f"📁 バックアップ: {github_status}", ephemeral=True)
+                            await sync_to_github("reply", interaction.user.name, post_id)
                         
                         except Exception as e:
                             logger.error(f"元の投稿の転送中にエラー: {e}")
