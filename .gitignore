@@ -108,9 +108,7 @@ dmypy.json
 .pyre/
 
 # Discord Bot specific
-bot.db
 bot.db.*
-*.db
 *.db.*
 backup/
 bot.log
