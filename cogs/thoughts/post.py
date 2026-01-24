@@ -227,6 +227,27 @@ class Post(commands.Cog, DatabaseMixin):
                             except discord.HTTPException:
                                 pass
                 
+                # 投稿をデータベースに保存
+                with self._get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        INSERT INTO thoughts (
+                            user_id, content, is_anonymous, is_private, 
+                            category, created_at, message_id, channel_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        str(interaction.user.id),
+                        message,
+                        1 if is_anonymous else 0,
+                        1 if not is_public else 0,
+                        category,
+                        datetime.now().isoformat(),
+                        str(sent_message.id),
+                        str(sent_message.channel.id)
+                    ))
+                    conn.commit()
+                    logger.info(f"投稿を保存しました: ID {post_id}, ユーザー {interaction.user.id}")
+                
                 # メッセージ参照を保存
                 with self._get_db_connection() as conn:
                     cursor = conn.cursor()
