@@ -148,6 +148,17 @@
 2026-01-25 03:51:16,461 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
 2026-01-25 03:51:18,464 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
 2026-01-25 03:51:20,467 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 03:51:21,046 - cogs.thoughts.github_sync - INFO - 🔥 強制コミットでGitHubに保存しました: new post
+2026-01-25 03:51:31,401 - cogs.thoughts.restore_messages - INFO - データベースをバックアップしました: backup/thoughts_backup_2026-01-25_03-51-31.db
+2026-01-25 03:51:32,003 - cogs.thoughts.restore_messages - INFO - バックアップファイルをGitHubに保存しました: backup/thoughts_backup_2026-01-25_03-51-31.db
+2026-01-25 03:52:07,459 - cogs.thoughts.restore_messages - INFO - データベース整合性チェック完了: 投稿1件, 参照1件, 問題0件
+2026-01-25 03:52:15,704 - cogs.thoughts.restore_messages - INFO - 孤立した参照をクリーンアップ: 0件削除
+2026-01-25 03:52:21,975 - cogs.thoughts.list - INFO - 投稿一覧の取得を開始: user_id=772268153370968117, limit=10
+2026-01-25 04:09:48,266 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 1/5): 
+2026-01-25 04:09:50,270 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 2/5): 
+2026-01-25 04:09:52,274 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
+2026-01-25 04:09:54,277 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 04:09:56,281 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
 _sync - WARNING - Git commit失敗、リトライします (試行 3/5): 
-2026-01-25 03:51:18,464 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
-2026-01-25 03:51:20,467 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
+2026-01-25 04:09:54,277 - cogs.thoughts.github_sync - WARNING - Git commit失敗、リトライします (試行 4/5): 
+2026-01-25 04:09:56,281 - cogs.thoughts.github_sync - ERROR - 最終手段：強制コミットを実行します
