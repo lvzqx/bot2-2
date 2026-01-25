@@ -220,8 +220,11 @@ jobs:
           echo "実行中... ($i/30分)"
         done
         
-        echo "30分経過したため、ボットを停止して次のワークフローに引き継ぎます"
-        pkill -f "python.*bot.py" || true
+        echo "30分経過しました。ボットは実行を継続します"
+        echo "次のワークフローが起動したら自然に引き継がれます"
+        
+        # ボットは停止せず、次のワークフローに引き継がせる
+        # GitHub Actionsはタイムアウトするが、ボットは実行し続ける
     
     - name: Create automatic backup
       run: |
