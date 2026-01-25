@@ -5,8 +5,8 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごとに実行（UTC）
-    - cron: '0,30 * * * *'  # 毎時0分と30分に実行（確実）
+    # - cron: '*/30 * * * *'  # 30分ごとに実行（UTC）- 一時停止
+    # - cron: '0,30 * * * *'  # 毎時0分と30分に実行（確実）- 一時停止
 
 jobs:
   run-bot:
