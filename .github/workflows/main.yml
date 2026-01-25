@@ -12,8 +12,8 @@ jobs:
   run-bot:
     runs-on: ubuntu-latest
     
-    # タイムアウトを30分に設定して確実に終了
-    timeout-minutes: 35
+    # タイムアウトを60分に設定して繰り返しを保証
+    timeout-minutes: 60
     
     steps:
     - uses: actions/checkout@v3
