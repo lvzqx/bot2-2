@@ -315,61 +315,14 @@ jobs:
             LAST_BACKUP_DATE="0"
           fi
           
-          if [ "$CURRENT_DATE" -gt "$LAST_BACKUP_DATE" ] && [ $? -ne 0 ]; then
-            echo "🚨 緊急バックアップ：別ブランチに保存します"
-            git checkout -b emergency-backup-$(date +%Y%m%d_%H%M%S)
-            git add -A
-            git commit -m "🚨 Emergency backup - $(date '+%Y-%m-%d %H:%M:%S')" || true
-            git push origin emergency-backup-$(date +%Y%m%d_%H%M%S) --force || true
-            git checkout main
-            echo "$CURRENT_DATE" > "$LAST_BACKUP_FILE"
-          fi
+          # 緊急バックアップは無効化（不要なコミットを防止）
+          echo "ℹ️ 緊急バックアップは無効化されています"
         else
           echo "ℹ️ bot.dbに変更はありません"
         fi
         
-        # バックアップファイルの変更をチェック
-        BACKUP_CHANGED=false
-        if [ -d "backup" ]; then
-          for backup_file in backup/auto_backup_*.db; do
-            if [ -f "$backup_file" ] && ! git diff --quiet "$backup_file"; then
-              BACKUP_CHANGED=true
-              break
-            fi
-          done
-        fi
-        
-        # バックアップファイルが変更されている場合のみコミット
-        if [ "$BACKUP_CHANGED" = true ]; then
-          echo "📝 バックアップファイルをGitHubに保存します..."
-          git add backup/auto_backup_*.db
-          
-          # コミットをリトライ
-          for i in {1..3}; do
-            if git commit -m "📁 Update backup files - $(date '+%Y-%m-%d %H:%M:%S')"; then
-              echo "✅ バックアップファイルをコミットしました (試行 $i)"
-              break
-            else
-              echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
-              git pull --rebase origin main || true
-              sleep 5
-            fi
-          done
-          
-          # プッシュをリトライ
-          for i in {1..3}; do
-            if git push origin main; then
-              echo "✅ バックアップファイルをプッシュしました (試行 $i)"
-              break
-            else
-              echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
-              git pull --rebase origin main || true
-              sleep 5
-            fi
-          done
-        else
-          echo "ℹ️ バックアップファイルに変更はありません"
-        fi
+        # バックアップファイルの処理は無効化（自動バックアップは停止済み）
+        echo "ℹ️ バックアップファイルの処理は無効化されています"
     
     - name: Show logs
       if: always()
