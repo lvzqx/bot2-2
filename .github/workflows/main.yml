@@ -238,24 +238,14 @@ jobs:
         # ボットは停止せず、次のワークフローに引き継がせる
         # GitHub Actionsはタイムアウトするが、ボットは実行し続ける
     
-    - name: Create automatic backup
+    - name: Skip automatic backup
       run: |
+        echo "ℹ️ 30分ごとの自動バックアップをスキップします"
+        echo "📊 データベースはGitHub同期で保護されています"
         if [ -f "bot.db" ]; then
-          echo "🔄 自動バックアップを作成します..."
-          mkdir -p backup
-          
-          # バックアップファイル名にタイムスタンプを付けて保存
-          BACKUP_FILE="backup/auto_backup_$(date '+%Y%m%d_%H%M%S').db"
-          cp bot.db "$BACKUP_FILE"
-          
-          echo "✅ バックアップを作成しました: $BACKUP_FILE"
-          echo "📊 バックアップサイズ: $(wc -c < "$BACKUP_FILE") bytes"
-          
-          # バックアップファイルの数を確認（無制限に保持）
-          BACKUP_COUNT=$(ls -1 backup/auto_backup_*.db 2>/dev/null | wc -l)
-          echo "📁 現在のバックアップ数: $BACKUP_COUNT（無制限）"
+          echo "✅ データベースサイズ: $(wc -c < bot.db) bytes"
         else
-          echo "ℹ️ データベースファイルが存在しないため、バックアップを作成しません"
+          echo "⚠️ データベースファイルが存在しません"
         fi
     
     - name: Commit database changes
