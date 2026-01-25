@@ -5,7 +5,8 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごとにチェック（UTC）
+    - cron: '*/30 * * * *'  # 30分ごとに実行（UTC）
+    - cron: '0,30 * * * *'  # 毎時0分と30分に実行（確実）
 
 jobs:
   run-bot:
@@ -16,6 +17,7 @@ jobs:
     concurrency: 
       group: bot-${{ github.ref }}
       cancel-in-progress: false
+      # 複数実行を許可して30分繰り返しを保証
     
     steps:
     - uses: actions/checkout@v3
