@@ -14,7 +14,7 @@ jobs:
     # 同じコミットに対して同時に複数のワークフローが実行されないようにする
     concurrency: 
       group: bot-${{ github.ref }}
-      cancel-in-progress: false
+      cancel-in-progress: true
     
     steps:
     - uses: actions/checkout@v3
