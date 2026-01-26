@@ -171,57 +171,15 @@ jobs:
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
       run: |
         # 既存の実行中のワークフローをチェック
-        echo "🔍 APIチェック開始..."
-        echo "📋 自分のジョブID: ${{ github.run_id }}"
-        
-        # jqがインストールされているか確認
-        if ! command -v jq &> /dev/null; then
-          echo "❌ jqがインストールされていません"
-          echo "RUN_BOT=true" >> $GITHUB_ENV
-          exit 0
-        fi
-        
-        # APIレスポンスを確認（リトライ付き）
-        API_RESPONSE=""
-        for i in {1..3}; do
-          echo "📡 API呼び出し試行 $i/3..."
-          API_RESPONSE=$(curl -s -H "Authorization: token ${{ github.token }}" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress")
-          
-          if [ $? -eq 0 ] && [ -n "$API_RESPONSE" ]; then
-            echo "✅ API呼び出し成功"
-            break
-          else
-            echo "⚠️ API呼び出し失敗、リトライします..."
-            sleep 2
-          fi
-        done
-        
-        echo "📡 APIレスポンス: $API_RESPONSE"
-        
-        # APIレスポンスが空の場合は実行を許可
-        if [ -z "$API_RESPONSE" ]; then
-          echo "⚠️ APIレスポンスが空です。実行を許可します。"
-          echo "RUN_BOT=true" >> $GITHUB_ENV
-          exit 0
-        fi
-        
-        # 実行中のジョブをチェック
-        RUNNING_JOBS=$(echo "$API_RESPONSE" | jq -r '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id' 2>/dev/null || echo "")
-        echo "🔍 検出した実行中ジョブ: $RUNNING_JOBS"
-        
-        # ジョブチェックに失敗した場合も実行を許可
-        if [ $? -ne 0 ]; then
-          echo "⚠️ ジョブチェックに失敗しました。実行を許可します。"
-          echo "RUN_BOT=true" >> $GITHUB_ENV
-          exit 0
-        fi
+        RUNNING_JOBS=$(curl -s -H "Authorization: token ${{ github.token }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress" | \
+          jq -r '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id')
         
         if [ -z "$RUNNING_JOBS" ]; then
-          echo "✅ ボットが実行されていないため、起動します"
+          echo "ボットが実行されていないため、起動します"
           echo "RUN_BOT=true" >> $GITHUB_ENV
         else
-          echo "⚠️ ボットは既に実行中です"
+          echo "ボットは既に実行中です"
           echo "RUN_BOT=false" >> $GITHUB_ENV
         fi
     
