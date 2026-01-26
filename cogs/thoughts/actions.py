@@ -528,32 +528,6 @@ class UnlikeModal(ui.Modal, title="💔 いいねを削除"):
                 )
                 return
             
-            # 元の投稿メッセージを取得していいねメッセージを削除
-            message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
-            if os.path.exists(message_ref_file):
-                try:
-                    with open(message_ref_file, 'r', encoding='utf-8') as f:
-                        message_ref = json.load(f)
-                    
-                    channel_id = message_ref[0]
-                    message_id = message_ref[1]
-                    
-                    channel = interaction.guild.get_channel(int(channel_id))
-                    if channel:
-                        message = await channel.fetch_message(int(message_id))
-                        
-                        # いいねメッセージを検索して削除
-                        async for msg in message.channel.history(around=message, limit=10):
-                            if (msg.author == interaction.guild.me and 
-                                msg.reference and 
-                                msg.reference.message_id == message.id and
-                                f"❤️いいね：{interaction.user.display_name}" in msg.content):
-                                await msg.delete()
-                                logger.info(f"いいねメッセージを削除しました: メッセージID={msg.id}")
-                                break
-                except (json.JSONDecodeError, FileNotFoundError, discord.NotFound, discord.Forbidden):
-                    pass
-            
             await interaction.followup.send(
                 f"💔 **いいねを削除しました**\n\n"
                 f"投稿ID: {post_id} のいいねを削除しました。",
@@ -650,20 +624,6 @@ class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
                     ephemeral=True
                 )
                 return
-            
-            # Discordメッセージを削除
-            message_id = reply_data.get('message_id')
-            channel_id = reply_data.get('channel_id')
-            
-            if message_id and channel_id:
-                try:
-                    channel = interaction.guild.get_channel(int(channel_id))
-                    if channel:
-                        message = await channel.fetch_message(int(message_id))
-                        await message.delete()
-                        logger.info(f"リプライメッセージを削除しました: メッセージID={message_id}")
-                except (discord.NotFound, discord.Forbidden) as e:
-                    logger.warning(f"リプライメッセージの削除に失敗しました: {e}")
             
             # リプライファイルを削除
             os.remove(reply_file_path)
