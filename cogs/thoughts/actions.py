@@ -254,7 +254,11 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             # 「リプライ」チャンネルを取得
             reply_channel = discord.utils.get(interaction.guild.text_channels, name="リプライ")
             
+            logger.info(f"リプライチャンネル検索結果: {reply_channel}")
+            logger.info(f"サーバーのチャンネル一覧: {[ch.name for ch in interaction.guild.text_channels]}")
+            
             if reply_channel:
+                logger.info(f"リプライチャンネルが見つかりました: {reply_channel.id}")
                 # 元の投稿メッセージを取得
                 cursor.execute('''
                     SELECT message_id, channel_id 
@@ -263,17 +267,25 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 ''', (post_id,))
                 message_ref = cursor.fetchone()
                 
+                logger.info(f"メッセージ参照検索結果: {message_ref}")
+                
                 if message_ref:
                     # 元の投稿があったチャンネルから投稿を取得
                     original_channel = interaction.guild.get_channel(int(message_ref[1]))
+                    
+                    logger.info(f"元のチャンネル検索結果: {original_channel}")
                     
                     if original_channel:
                         try:
                             # 元の投稿メッセージを取得
                             message = await original_channel.fetch_message(int(message_ref[0]))
                             
+                            logger.info(f"元のメッセージ取得成功: {message.id}")
+                            
                             # ボットの権限をチェック
                             bot_permissions = reply_channel.permissions_for(interaction.guild.me)
+                            logger.info(f"ボットの権限: {bot_permissions}")
+                            
                             if not bot_permissions.read_message_history:
                                 logger.warning("ボットにメッセージ履歴を読む権限がありません")
                                 raise PermissionError("read_message_history")
