@@ -39,129 +39,85 @@ jobs:
         # jqをインストール
         sudo apt-get update && sudo apt-get install -y jq
     
-    - name: Setup database directory
+    - name: Setup data directory
       run: |
-        mkdir -p logs temp backups
-        chmod 755 logs temp backups
+        mkdir -p logs temp backups data/posts data/replies data/likes
+        chmod 755 logs temp backups data data/posts data/replies data/likes
     
-    - name: Preserve existing database
+    - name: Preserve existing data
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # 既存のデータベースを保護（上書きしない）
-        if [ -f "bot.db" ]; then
-          echo "✅ 既存のbot.dbを保護します"
-          echo "📊 データベース情報:"
-          ls -la bot.db
-          sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" 2>/dev/null || echo "テーブルが存在しません"
+        # 既存のデータを保護（上書きしない）
+        if [ -d "data" ]; then
+          echo "✅ 既存のdataディレクトリを保護します"
+          echo "📊 データ情報:"
+          find data -name "*.json" | wc -l
+          echo "投稿数: $(find data/posts -name "*.json" | wc -l)"
+          echo "リプライ数: $(find data/replies -name "*.json" | wc -l)"
+          echo "いいね数: $(find data/likes -name "*.json" | wc -l)"
         else
-          echo "⚠️ bot.dbが見つかりません"
+          echo "⚠️ dataディレクトリが見つかりません"
           echo "🔄 GitHubから取得を試みます..."
           git fetch origin main
-          git checkout origin/main -- bot.db 2>/dev/null || echo "⚠️ GitHubからの取得に失敗しました"
+          git checkout origin/main -- data/ 2>/dev/null || echo "⚠️ GitHubからの取得に失敗しました"
           
-          if [ -f "bot.db" ]; then
-            echo "✅ GitHubからbot.dbを取得しました"
+          if [ -d "data" ]; then
+            echo "✅ GitHubからdataディレクトリを取得しました"
           else
-            echo "⚠️ GitHubにもbot.dbがありません"
-            echo "📝 新規に空のデータベースを作成します"
-            touch bot.db
+            echo "⚠️ GitHubにもdataディレクトリがありません"
+            echo "📝 新規に空のデータディレクトリを作成します"
+            mkdir -p data/posts data/replies data/likes
           fi
         fi
     
-    - name: Check if database exists
+    - name: Check if data exists
       run: |
-        # データベースの状態を確認
-        if [ -f "bot.db" ]; then
-          echo "既存のデータベースサイズ: $(wc -c < bot.db) bytes"
-          if [ -s "bot.db" ]; then
-            echo "✅ 既存のデータベースを使用します（データあり）"
+        # データの状態を確認
+        if [ -d "data" ]; then
+          echo "既存のデータディレクトリサイズ: $(du -sh data | cut -f1)"
+          if [ "$(find data -name "*.json" | wc -l)" -gt 0 ]; then
+            echo "✅ 既存のデータを使用します（データあり）"
             
-            # データベースにデータがあるか確認
-            sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" > /tmp/db_count.txt 2>/dev/null || echo "0" > /tmp/db_count.txt
-            DB_COUNT=$(cat /tmp/db_count.txt)
-            echo "📊 データベースの投稿数: $DB_COUNT"
+            # データにファイルがあるか確認
+            POST_COUNT=$(find data/posts -name "*.json" | wc -l)
+            REPLY_COUNT=$(find data/replies -name "*.json" | wc -l)
+            LIKE_COUNT=$(find data/likes -name "*.json" | wc -l)
+            echo "📊 データの投稿数: $POST_COUNT"
+            echo "📊 データのリプライ数: $REPLY_COUNT"
+            echo "📊 データのいいね数: $LIKE_COUNT"
             
-            if [ "$DB_COUNT" -gt 0 ]; then
-              echo "✅ データベースにデータが存在します。既存データを保護します。"
-              # 既存データを保護（上書きしない）
-              if [ -f "bot.db" ]; then
-                echo "⚠️ bot.db は無視します（既存データを保護）"
-                # rm -f bot.db  # ← 削除：5分ごとにbot.dbを消さないようにする
-              fi
+            if [ "$POST_COUNT" -gt 0 ]; then
+              echo "✅ データにデータが存在します。既存データを保護します。"
             else
-              echo "⚠️ データベースが存在しません"
-              echo "🔄 GitHubから取得を試みます..."
-              git fetch origin main
-              git checkout origin/main -- bot.db 2>/dev/null || echo "⚠️ GitHubからの取得に失敗しました"
-              
-              if [ -f "bot.db" ] && [ -s "bot.db" ]; then
-                echo "✅ GitHubからデータベースを取得しました"
-              else
-                echo "⚠️ GitHubにも有効なデータベースがありません"
-                echo "🔄 バックアップから復元を試みます..."
-                if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
-                  LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
-                  echo "📁 最新のバックアップ: $LATEST_BACKUP"
-                  cp "$LATEST_BACKUP" bot.db
-                  echo "✅ バックアップから復元しました"
-                  
-                  # 復元後の確認
-                  RESTORED_COUNT=$(sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" 2>/dev/null || echo "0")
-                  echo "📊 復元後の投稿数: $RESTORED_COUNT"
-                  if [ "$RESTORED_COUNT" -gt 0 ]; then
-                    echo "✅ データ復元に成功しました"
-                  else
-                    echo "⚠️ バックアップも空でした"
-                  fi
-                else
-                  echo "⚠️ 利用可能なバックアップがありません"
-                  echo "📝 新規に空のデータベースを作成します"
-                  touch bot.db
-                fi
-              fi
-            fi
-          else
-            echo "⚠️ 既存のデータベースは空です"
-            # 上記の復元ロジックで処理されるため、ここでは何もしない
+            echo "⚠️ データが存在しません"
           fi
         else
-          echo "⚠️ データベースが存在しません"
+          echo "⚠️ データディレクトリが存在しません"
           echo "🔄 GitHubから取得を試みます..."
           git pull origin main || echo "⚠️ GitHubからの取得に失敗しました"
           
-          if [ -f "bot.db" ]; then
-            echo "✅ GitHubからデータベースを取得しました"
+          if [ -d "data" ]; then
+            echo "✅ GitHubからデータディレクトリを取得しました"
           else
-            echo "⚠️ GitHubにもデータベースがありません"
-            echo "🔄 バックアップから復元を試みます..."
-            if [ -d "backup" ] && [ "$(ls -1 backup/*.db 2>/dev/null | wc -l)" -gt 0 ]; then
-              LATEST_BACKUP=$(ls -1t backup/*.db 2>/dev/null | head -n 1)
-              cp "$LATEST_BACKUP" bot.db
-              echo "✅ バックアップから復元しました: $LATEST_BACKUP"
-            else
-              echo "❌ バックアップもありません"
-              if [ ! -f "bot.db" ]; then
-                echo "📝 新規に空のデータベースを作成します（既存ファイルはありません）"
-                touch bot.db
-              else
-                echo "✅ 既存のbot.dbを保護します（上書しません）"
-              fi
-            fi
+            echo "⚠️ GitHubにもデータディレクトリがありません"
+            echo "� 新規に空のデータディレクトリを作成します"
+            mkdir -p data/posts data/replies data/likes
           fi
         fi
         
-        # 最終的なデータベース状態を確認
-        if [ -f "bot.db" ]; then
-          echo "📊 最終データベースサイズ: $(wc -c < bot.db) bytes"
-          if [ -s "bot.db" ]; then
-            sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" > /tmp/final_count.txt 2>/dev/null || echo "0" > /tmp/final_count.txt
-            FINAL_COUNT=$(cat /tmp/final_count.txt)
-            echo "📊 最終投稿数: $FINAL_COUNT"
-          else
-            echo "⚠️ 最終データベースは空です"
-          fi
+        # 最終的なデータ状態を確認
+        if [ -d "data" ]; then
+          echo "📊 最終データディレクトリサイズ: $(du -sh data | cut -f1)"
+          FINAL_POST_COUNT=$(find data/posts -name "*.json" | wc -l)
+          FINAL_REPLY_COUNT=$(find data/replies -name "*.json" | wc -l)
+          FINAL_LIKE_COUNT=$(find data/likes -name "*.json" | wc -l)
+          echo "📊 最終投稿数: $FINAL_POST_COUNT"
+          echo "📊 最終リプライ数: $FINAL_REPLY_COUNT"
+          echo "📊 最終いいね数: $FINAL_LIKE_COUNT"
+        else
+          echo "⚠️ 最終データディレクトリは存在しません"
         fi
     
     - name: Check if bot is running
@@ -189,8 +145,8 @@ jobs:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
       run: |
-        # ボット起動時にデータベースパスを指定
-        export DB_PATH="bot.db"
+        # ボット起動時にデータディレクトリを指定
+        export DATA_DIR="data"
         
         # 既存のプロセスを終了
         pkill -f "python.*bot.py" || true
@@ -221,7 +177,7 @@ jobs:
           if ! ps -p $(cat temp/bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
             # 再起動
-            export DB_PATH="bot.db"
+            export DATA_DIR="data"
             nohup python bot.py > logs/bot.log 2>&1 &
             echo $! > temp/bot.pid
             sleep 10
@@ -233,11 +189,12 @@ jobs:
     - name: Skip automatic backup
       run: |
         echo "ℹ️ 30分ごとの自動バックアップをスキップします"
-        echo "📊 データベースはGitHub同期で保護されています"
-        if [ -f "bot.db" ]; then
-          echo "✅ データベースサイズ: $(wc -c < bot.db) bytes"
+        echo "📊 データはGitHub同期で保護されています"
+        if [ -d "data" ]; then
+          echo "✅ データディレクトリサイズ: $(du -sh data | cut -f1)"
+          echo "📊 投稿数: $(find data/posts -name "*.json" | wc -l)"
         else
-          echo "⚠️ データベースファイルが存在しません"
+          echo "⚠️ データディレクトリが存在しません"
         fi
     
     - name: Commit database changes
@@ -246,31 +203,44 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # bot.dbの変更をチェック
-        DB_CHANGED=false
-        if [ -f "bot.db" ]; then
-          # bot.dbに変更があるかチェック
-          if ! git diff --quiet "bot.db"; then
-            DB_CHANGED=true
-            echo "📝 bot.dbに変更があります"
+        # データの変更をチェック
+        DATA_CHANGED=false
+        
+        # データディレクトリに変更があるか確認
+        if [ -d "data" ]; then
+          # 最新のタイムスタンプを取得
+          LATEST_TIMESTAMP=$(find data -name "*.json" -exec stat -c %Y%m%d%H%M.%S {} + | sort -r | head -n 1 | cut -d' ' -f6 2>/dev/null)
+          TIMESTAMP_FILE="data/.last_sync"
+          
+          # タイムスタンプファイルが存在するか確認
+          if [ -f "$TIMESTAMP_FILE" ]; then
+            SAVED_TIMESTAMP=$(cat "$TIMESTAMP_FILE" 2>/dev/null)
+            if [ "$LATEST_TIMESTAMP" != "$SAVED_TIMESTAMP" ]; then
+              DATA_CHANGED=true
+              echo "📝 データに変更があります"
+            fi
           else
-            # 強制的に変更を検知させるための処理（シーケンスに影響しない方法）
-            # ファイルのタイムスタンプを更新するだけで、データベースには触らない
-            touch bot.db
-            DB_CHANGED=true
-            echo "📝 bot.dbのタイムスタンプを更新して変更を検知"
+            DATA_CHANGED=true
+            echo "📝 データに変更があります（タイムスタンプファイルなし）"
           fi
+          
+          # タイムスタンプファイルを更新
+          echo "$(date '+%Y%m%d%H%M.%S')" > "$TIMESTAMP_FILE"
+        else
+          # データディレクトリがない場合は変更なし
+          DATA_CHANGED=false
+          echo "データディレクトリがありません"
         fi
         
-        # bot.dbが変更されている場合のみコミット
-        if [ "$DB_CHANGED" = true ]; then
-          echo "📝 bot.dbをGitHubに保存します..."
-          git add bot.db
+        # データが変更されている場合のみコミット
+        if [ "$DATA_CHANGED" = true ]; then
+          echo "📝 データをGitHubに保存します..."
+          git add data/
           
           # コミットをリトライ（最大3回に減らして整理）
           for i in {1..3}; do
-            if git commit -m "🔄 Auto-sync bot.db - $(date '+%Y-%m-%d %H:%M:%S')"; then
-              echo "✅ bot.dbをコミットしました (試行 $i)"
+            if git commit -m "🔄 Auto-sync data - $(date '+%Y-%m-%d %H:%M:%S')"; then
+              echo "✅ データをコミットしました (試行 $i)"
               break
             else
               echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
@@ -280,7 +250,7 @@ jobs:
               if [ $i -eq 3 ]; then
                 echo "🔥 最終手段：クリーンなコミットを実行します"
                 git add -A
-                git commit -m "� Database sync - $(date '+%Y-%m-%d %H:%M:%S')" || true
+                git commit -m "🔄 Data sync - $(date '+%Y-%m-%d %H:%M:%S')" || true
               fi
             fi
           done
@@ -288,7 +258,7 @@ jobs:
           # プッシュをリトライ（最大3回に減らす）
           for i in {1..3}; do
             if git push origin main; then
-              echo "✅ bot.dbをプッシュしました (試行 $i)"
+              echo "✅ データをプッシュしました (試行 $i)"
               break
             else
               echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
@@ -301,24 +271,9 @@ jobs:
               fi
             fi
           done
-          
-          # 緊急バックアップ：1日1回のみに制限
-          CURRENT_DATE=$(date +%Y%m%d)
-          LAST_BACKUP_FILE="backup/.last_emergency_backup"
-          if [ -f "$LAST_BACKUP_FILE" ]; then
-            LAST_BACKUP_DATE=$(cat "$LAST_BACKUP_FILE")
-          else
-            LAST_BACKUP_DATE="0"
-          fi
-          
-          # 緊急バックアップは無効化（不要なコミットを防止）
-          echo "ℹ️ 緊急バックアップは無効化されています"
         else
-          echo "ℹ️ bot.dbに変更はありません"
+          echo "ℹ️ データに変更はありません"
         fi
-        
-        # バックアップファイルの処理は無効化（自動バックアップは停止済み）
-        echo "ℹ️ バックアップファイルの処理は無効化されています"
     
     - name: Show logs
       if: always()
@@ -330,18 +285,20 @@ jobs:
           echo "=== 最終50行 ==="
           tail -n 50 logs/bot.log
         fi
-        if [ -f "bot.db" ]; then
-          echo "=== データベース情報 ==="
-          ls -la bot.db
-          sqlite3 bot.db "SELECT COUNT(*) FROM thoughts;" || echo "データベースが存在しません"
+        if [ -d "data" ]; then
+          echo "=== データ情報 ==="
+          echo "📁 データディレクトリサイズ: $(du -sh data | cut -f1)"
+          echo "📊 投稿数: $(find data/posts -name "*.json" | wc -l)"
+          echo "📊 リプライ数: $(find data/replies -name "*.json" | wc -l)"
+          echo "📊 いいね数: $(find data/likes -name "*.json" | wc -l)"
           echo "=== 最近の投稿 ==="
-          sqlite3 bot.db "SELECT id, is_anonymous, is_private, created_at FROM thoughts ORDER BY created_at DESC LIMIT 5;" || echo "投稿データが取得できません"
+          find data/posts -name "*.json" -exec ls -lt {} + | head -5 || echo "投稿データが取得できません"
         fi
         
         if [ -d "backups" ]; then
           echo "=== バックアップ情報 ==="
           echo "📁 バックアップファイル一覧:"
-          ls -la backups/auto_backup_*.db 2>/dev/null || ls -la backups/*.db 2>/dev/null || echo "バックアップファイルがありません"
-          BACKUP_COUNT=$(ls -1 backups/*.db 2>/dev/null | wc -l)
-          echo "📊 バックアップ数: $BACKUP_COUNT（無制限）"
+          ls -la backups/ 2>/dev/null || echo "バックアップディレクトリがありません"
+          BACKUP_COUNT=$(find backups -name "*.json" 2>/dev/null | wc -l)
+          echo "📊 バックアップ数: $BACKUP_COUNT"
         fi

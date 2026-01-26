@@ -4,13 +4,19 @@ Google風の検索インターフェースと完全な機能
 """
 
 import logging
-import sqlite3
+import os
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
+
+# ファイルマネージャーをインポート
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from file_manager import FileManager
+from config import get_channel_id, extract_channel_id
 
 # ロガー設定
 logger = logging.getLogger(__name__)
@@ -27,6 +33,7 @@ class Search(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.file_manager = FileManager()
         logger.info("Search cog が初期化されました")
     
     def _search_posts(
@@ -39,147 +46,84 @@ class Search(commands.Cog):
         search_type: str = 'posts'
     ) -> List[Dict[str, Any]]:
         """投稿を検索（リプライといいねも対応）"""
-        import os
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
         
         try:
-            if search_type == 'replies':
-                # リプライ検索
-                query = '''
-                    SELECT r.id, r.content, r.created_at, r.display_name, r.user_id,
-                           r.post_id, t.content as parent_content
-                    FROM replies r
-                    LEFT JOIN thoughts t ON r.post_id = t.id
-                    WHERE 1=1
-                '''
-                params = []
+            if search_type == 'posts':
+                # 投稿検索
+                posts = self.file_manager.search_posts(
+                    keyword=keyword,
+                    category=category,
+                    user_id=str(user_id) if user_id else None
+                )
                 
-                if keyword:
-                    query += ' AND (r.content LIKE ? OR r.display_name LIKE ?)'
-                    params.extend([f'%{keyword}%', f'%{keyword}%'])
+                # 非公開投稿のフィルタリング
+                if current_user_id:
+                    posts = [p for p in posts if not p.get('is_private') or p.get('user_id') == str(current_user_id)]
+                else:
+                    posts = [p for p in posts if not p.get('is_private')]
                 
-                if user_id:
-                    query += ' AND r.user_id = ?'
-                    params.append(user_id)
+                return posts[:limit]
+            
+            elif search_type == 'replies':
+                # リプライ検索 - 全投稿のリプライを検索
+                all_posts = self.file_manager.get_all_posts()
+                all_replies = []
                 
-                query += ' ORDER BY r.created_at DESC LIMIT ?'
-                params.append(limit)
+                for post in all_posts:
+                    replies = self.file_manager.get_replies(post['id'])
+                    
+                    for reply in replies:
+                        # キーワードフィルタリング
+                        if keyword:
+                            keyword_lower = keyword.lower()
+                            if (keyword_lower not in reply.get('content', '').lower() and 
+                                keyword_lower not in reply.get('display_name', '').lower()):
+                                continue
+                        
+                        # ユーザーIDフィルタリング
+                        if user_id and reply.get('user_id') != str(user_id):
+                            continue
+                        
+                        # 親投稿情報を追加
+                        reply['parent_content'] = post.get('content', '元の投稿が見つかりません')
+                        all_replies.append(reply)
                 
-                cursor.execute(query, params)
-                rows = cursor.fetchall()
-                
-                return [
-                    {
-                        'id': row[0],
-                        'content': row[1],
-                        'created_at': row[2],
-                        'display_name': row[3],
-                        'user_id': row[4],
-                        'post_id': row[5],
-                        'parent_content': row[6] if row[6] else '元の投稿が見つかりません',
-                        'type': 'reply'
-                    }
-                    for row in rows
-                ]
+                # 作成日時でソート
+                all_replies.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+                return all_replies[:limit]
             
             elif search_type == 'likes':
-                # いいね検索
-                query = '''
-                    SELECT ar.target_id, ar.action_data, ar.created_at, t.content, t.display_name, t.user_id
-                    FROM actions_user ar
-                    LEFT JOIN thoughts t ON ar.target_id = t.id
-                    WHERE ar.action_type = 'like'
-                '''
-                params = []
+                # いいね検索 - 全投稿のいいねを検索
+                all_posts = self.file_manager.get_all_posts()
+                all_likes = []
                 
-                if keyword:
-                    query += ' AND (t.content LIKE ? OR t.display_name LIKE ?)'
-                    params.extend([f'%{keyword}%', f'%{keyword}%'])
+                for post in all_posts:
+                    likes = self.file_manager.get_likes(post['id'])
+                    
+                    for like in likes:
+                        # キーワードフィルタリング
+                        if keyword:
+                            keyword_lower = keyword.lower()
+                            if keyword_lower not in like.get('display_name', '').lower():
+                                continue
+                        
+                        # ユーザーIDフィルタリング
+                        if user_id and like.get('user_id') != str(user_id):
+                            continue
+                        
+                        # 親投稿情報を追加
+                        like['parent_content'] = post.get('content', '元の投稿が見つかりません')
+                        all_likes.append(like)
                 
-                if user_id:
-                    query += ' AND ar.user_id = ?'
-                    params.append(user_id)
-                
-                query += ' ORDER BY ar.created_at DESC LIMIT ?'
-                params.append(limit)
-                
-                cursor.execute(query, params)
-                rows = cursor.fetchall()
-                
-                return [
-                    {
-                        'id': row[0],
-                        'action_data': row[1],
-                        'created_at': row[2],
-                        'content': row[3] if row[3] else '投稿が見つかりません',
-                        'display_name': row[4] if row[4] else '不明',
-                        'user_id': row[5],
-                        'type': 'like'
-                    }
-                    for row in rows
-                ]
+                # 作成日時でソート
+                all_likes.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+                return all_likes[:limit]
             
-            else:
-                # 通常の投稿検索
-                query = '''
-                    SELECT id, content, category, created_at, display_name, user_id,
-                           is_anonymous, is_private, image_url
-                    FROM thoughts
-                    WHERE 1=1
-                '''
-                params = []
-                
-                # 検索条件を追加
-                if keyword:
-                    query += ' AND (content LIKE ? OR category LIKE ?)'
-                    params.extend([f'%{keyword}%', f'%{keyword}%'])
-                
-                if category:
-                    query += ' AND category = ?'
-                    params.append(category)
-                
-                if user_id:
-                    query += ' AND user_id = ?'
-                    params.append(user_id)
-                
-                # 非公開投稿は自分のみ表示
-                if current_user_id:
-                    query += ' AND (is_private = 0 OR user_id = ?)'
-                    params.append(current_user_id)
-                else:
-                    # ユーザーIDがない場合は公開投稿のみ
-                    query += ' AND is_private = 0'
-                
-                query += ' ORDER BY created_at DESC LIMIT ?'
-                params.append(limit)
-                
-                cursor.execute(query, params)
-                rows = cursor.fetchall()
-                
-                return [
-                    {
-                        'id': row[0],
-                        'content': row[1],
-                        'category': row[2],
-                        'created_at': row[3],
-                        'display_name': row[4],
-                        'user_id': row[5],
-                        'is_anonymous': bool(row[6]),
-                        'is_private': bool(row[7]),
-                        'image_url': row[8],
-                        'type': 'post'
-                    }
-                    for row in rows
-                ]
-        
-        except Exception as e:
-            logger.error(f"投稿検索中にエラーが発生しました: {e}")
             return []
-        
-        finally:
-            conn.close()
+            
+        except Exception as e:
+            logger.error(f"検索中にエラーが発生しました: {e}")
+            return []
     
     async def _create_embeds(self, interaction: Interaction, posts: List[PostData], keyword: str, search_type: str = 'posts') -> List[Embed]:
         """検索結果のEmbedを作成します"""
@@ -255,9 +199,21 @@ class Search(commands.Cog):
         return embeds
     
     @app_commands.command(name="search", description="🔍 投稿を検索")
+    @app_commands.guild_only()
     async def search_command(self, interaction: Interaction) -> None:
-        """Discord検索コマンド"""
+        """Discord検索コマンド - 検索チャンネル限定"""
         try:
+            # 検索チャンネルかチェック
+            search_channel_url = get_channel_id('search')
+            search_channel_id = extract_channel_id(search_channel_url)
+            
+            if interaction.channel.id != search_channel_id:
+                await interaction.response.send_message(
+                    "❌ **このコマンドは検索チャンネルでのみ使用できます**\n\n"
+                    f"検索チャンネル: <#{search_channel_id}>",
+                    ephemeral=True
+                )
+                return
             # DiscordロゴEmbed
             embed = Embed(
                 title=None,
@@ -380,33 +336,28 @@ class SearchView(ui.View):
             )
     
     def _log_action(self, user_id: int, action_type: str, target_id: int, action_data: Dict[str, Any]) -> None:
-        """アクションをデータベースに記録"""
+        """アクションをファイルに記録"""
         try:
-            # 絶対パスでデータベースに接続
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
+            import json
+            action_record = {
+                "user_id": user_id,
+                "action_type": action_type,
+                "target_id": target_id,
+                "action_data": action_data,
+                "created_at": datetime.now().isoformat()
+            }
             
-            # テーブル存在確認
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='actions_user'")
-            if cursor.fetchone():
-                cursor.execute('''
-                    INSERT INTO actions_user (user_id, action_type, target_id, action_data, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (
-                    user_id,
-                    action_type,
-                    target_id,
-                    str(action_data),
-                    datetime.now().isoformat()
-                ))
-                conn.commit()
+            # アクションファイルを作成
+            action_filename = os.path.join("data", f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            os.makedirs("data", exist_ok=True)
             
-            conn.close()
+            with open(action_filename, 'w', encoding='utf-8') as f:
+                json.dump(action_record, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
             
         except Exception as e:
-            logger.error(f"アクション記録中にエラーが発生しました: {e}")
+            logger.error(f"アクション記録中にエラーが発生しました: {e}", exc_info=True)
     
     def _create_post_embed(self, post: PostData, title: str) -> Embed:
         """投稿Embedを作成"""
@@ -634,18 +585,7 @@ class PaginationView(ui.View):
             await interaction.response.defer(ephemeral=True)
             
             # 投稿情報を取得
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT id, content, category, created_at, display_name, user_id,
-                       is_anonymous, is_private, image_url
-                FROM thoughts WHERE id = ?
-            ''', (post_id,))
-            post = cursor.fetchone()
-            conn.close()
+            post = self.search_cog.file_manager.get_post(post_id)
             
             if not post:
                 await interaction.followup.send(
@@ -656,25 +596,25 @@ class PaginationView(ui.View):
             
             # 詳細Embedを作成
             embed = discord.Embed(
-                title=f"📝 投稿詳細 (ID: {post[0]})",
+                title=f"📝 投稿詳細 (ID: {post['id']})",
                 color=discord.Color.blue()
             )
             
             # 投稿者情報
-            if post[6]:  # is_anonymous
+            if post.get('is_anonymous'):
                 author_info = "匿名"
             else:
-                author_info = post[4] or "名無し"
+                author_info = post.get('display_name') or "名無し"
             
             embed.add_field(name="👤 投稿者", value=author_info, inline=True)
             
             # 投稿日時をフォーマット（JSTタイムゾーン）
-            if post[3]:
+            if post.get('created_at'):
                 try:
                     # ISO形式からdatetimeオブジェクトに変換
                     from datetime import datetime, timedelta, timezone
-                    if 'T' in post[3]:
-                        dt = datetime.fromisoformat(post[3].replace('Z', '+00:00'))
+                    if 'T' in post['created_at']:
+                        dt = datetime.fromisoformat(post['created_at'].replace('Z', '+00:00'))
                         # タイムゾーン情報がある場合はJSTに変換、ない場合はJSTとして扱う
                         if dt.tzinfo is None:
                             # タイムゾーン情報がない場合はJSTとして扱う
@@ -684,34 +624,27 @@ class PaginationView(ui.View):
                             jst_dt = dt.astimezone(timezone(timedelta(hours=9)))
                         formatted_date = jst_dt.strftime('%Y年%m月%d日 %H:%M')
                     else:
-                        formatted_date = post[3][:10]  # フォールバック
+                        formatted_date = post['created_at'][:10]  # フォールバック
                 except:
-                    formatted_date = post[3][:10]  # フォールバック
+                    formatted_date = post['created_at'][:10]  # フォールバック
             else:
                 formatted_date = "不明"
             
             embed.add_field(name="📅 投稿日時", value=formatted_date, inline=True)
-            
-            if post[2]:  # category
-                embed.add_field(name="📁 カテゴリー", value=post[2], inline=True)
-            
-            if post[7]:  # is_private
-                embed.add_field(name="🔒 公開設定", value="非公開", inline=True)
-            else:
-                embed.add_field(name="🔒 公開設定", value="公開", inline=True)
+            embed.add_field(name="📁 カテゴリー", value=post.get('category') or '未分類', inline=True)
             
             # 投稿内容
             embed.add_field(
                 name="📄 内容",
-                value=f"```\n{post[1]}\n```",
+                value=f"```\n{post['content']}\n```",
                 inline=False
             )
             
             # 画像
-            if post[8]:  # image_url
-                embed.set_image(url=post[8])
+            if post.get('image_url'):
+                embed.set_image(url=post['image_url'])
             
-            embed.set_footer(text=f"ユーザーID: {post[5]}")
+            embed.set_footer(text=f"投稿ID: {post['id']}")
             
             await interaction.followup.send(embed=embed, ephemeral=True)
             
@@ -763,14 +696,21 @@ class PostActionView(ui.View):
             })
             
             # チャンネル転送
-            like_channel = discord.utils.get(interaction.guild.text_channels, name="いいねした投稿")
+            likes_channel_url = get_channel_id('likes')
+            likes_channel_id = extract_channel_id(likes_channel_url)
+            likes_channel = interaction.guild.get_channel(likes_channel_id)
             
-            if like_channel:
-                await like_channel.send(
-                    f"❤️ **いいねした投稿**\n\n"
-                    f"> {self.post['content'][:200]}{'...' if len(self.post['content']) > 200 else ''}\n\n"
-                    f"— {interaction.user.display_name}がいいね！"
+            if likes_channel:
+                embed = discord.Embed(
+                    title="❤️ いいねした投稿",
+                    description=f"**投稿ID: {self.post['id']}**\n\n{self.post['content'][:200]}{'...' if len(self.post['content']) > 200 else ''}",
+                    color=discord.Color.red()
                 )
+                embed.add_field(name="いいねした人", value=interaction.user.display_name, inline=True)
+                embed.add_field(name="投稿者", value=self.post.get('display_name', '名無し'), inline=True)
+                embed.set_footer(text=f"投稿ID: {self.post['id']}")
+                
+                await likes_channel.send(embed=embed)
                 
                 await interaction.followup.send(
                     f"❤️ **いいねしました！**\n\n"
@@ -842,40 +782,35 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
                 'parent_id': self.post['id']
             })
             
-            # リプライをデータベースに保存
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                INSERT INTO thoughts (user_id, content, category, is_private, parent_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                interaction.user.id,
-                reply_content,
-                'リプライ',
-                0,  # 公開
-                self.post['id'],  # 親投稿ID
-                datetime.now().isoformat()
-            ))
-            
-            conn.commit()
-            conn.close()
+            # リプライをファイルに保存
+            reply_id = self.search_cog.file_manager.save_reply(
+                post_id=self.post['id'],
+                user_id=str(interaction.user.id),
+                content=reply_content,
+                display_name=interaction.user.display_name
+            )
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github
             await sync_to_github("feeling lucky reply", interaction.user.name, self.post['id'])
             
             # チャンネル転送
-            reply_channel = discord.utils.get(interaction.guild.text_channels, name="リプライ")
+            replies_channel_url = get_channel_id('replies')
+            replies_channel_id = extract_channel_id(replies_channel_url)
+            replies_channel = interaction.guild.get_channel(replies_channel_id)
             
-            if reply_channel:
-                await reply_channel.send(
-                    f"💬 **転送されたリプライ**\n\n"
-                    f"> {reply_content}\n\n"
-                    f"— {interaction.user.display_name} (投稿ID: {self.post['id']}へのリプライ)"
+            if replies_channel:
+                embed = discord.Embed(
+                    title="💬 転送されたリプライ",
+                    description=f"**投稿ID: {self.post['id']}**\n\n{reply_content[:500]}{'...' if len(reply_content) > 500 else ''}",
+                    color=discord.Color.blue()
                 )
+                embed.add_field(name="リプライした人", value=interaction.user.display_name, inline=True)
+                embed.add_field(name="投稿者", value=self.post.get('display_name', '名無し'), inline=True)
+                embed.add_field(name="元の投稿", value=self.post.get('content', '')[:100] + '...' if len(self.post.get('content', '')) > 100 else self.post.get('content', ''), inline=False)
+                embed.set_footer(text=f"投稿ID: {self.post['id']}")
+                
+                await replies_channel.send(embed=embed)
                 
                 await interaction.followup.send(
                     f"💬 **リプライを投稿しました！**\n\n"

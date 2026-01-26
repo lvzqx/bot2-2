@@ -34,7 +34,6 @@ htmlcov/
 .tox/
 .nox/
 .coverage
-.coverage.*
 .cache
 nosetests.xml
 coverage.xml
@@ -49,7 +48,6 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
 
 # Flask stuff:
 instance/
@@ -112,9 +110,6 @@ temp/
 cache/
 logs/
 backups/
-# bot.dbはGitHubで管理するため無視しない
-# bot.db.*
-# *.db.*
 bot.log
 bot.pid
 *.log
@@ -141,3 +136,7 @@ Thumbs.db
 *.temp
 .tmp/
 .temp/
+
+# File-based data management
+data/
+!data/.gitkeep

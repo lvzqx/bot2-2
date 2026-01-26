@@ -1,15 +1,15 @@
-from __future__ import annotations
-
 import logging
-import sqlite3
-import contextlib
-from typing import List, Dict, Any, Optional, Tuple, Union
-from datetime import datetime
+import os
+from typing import Dict, Any, List
 
 import discord
-from discord import app_commands, ui, Interaction, Embed, File
+from discord import app_commands, Interaction, Embed
 from discord.ext import commands
-from bot import DatabaseMixin
+
+# ファイルマネージャーをインポート
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from file_manager import FileManager
 
 # ロガーの設定
 logger = logging.getLogger(__name__)
@@ -17,293 +17,250 @@ logger = logging.getLogger(__name__)
 # 型定義
 PostData = Dict[str, Any]  # 投稿データの型
 
-class List(commands.Cog, DatabaseMixin):
+class List(commands.Cog):
     """投稿一覧を表示するためのCog"""
     
     def __init__(self, bot: commands.Bot) -> None:
-        """List Cogを初期化します。
+        """
+        List cogの初期化
         
         Args:
             bot: Discord Bot インスタンス
         """
         self.bot: commands.Bot = bot
-        DatabaseMixin.__init__(self)
+        self.file_manager = FileManager()
         logger.info("List cog が初期化されました")
-    
-    async def _fetch_user_posts(self, user_id: int, limit: int) -> List[PostData]:
-        """ユーザーの投稿をデータベースから取得します。
-        
-        Args:
-            user_id: ユーザーID
-            limit: 取得する投稿の最大数
-            
-        Returns:
-            List[PostData]: 投稿データのリスト
-            
-        Raises:
-            sqlite3.Error: データベース操作に失敗した場合
-        """
-        try:
-            # 直接データベース接続を使用
-            conn = sqlite3.connect(self.db_path, timeout=30.0)
-            conn.row_factory = sqlite3.Row
-            
-            try:
-                cursor = conn.cursor()
-                # 必要なデータを一度のクエリで取得（サブクエリを使用）
-                cursor.execute('''
-                    SELECT 
-                        t.id, 
-                        t.content, 
-                        t.category, 
-                        t.created_at, 
-                        t.is_private, 
-                        t.display_name,
-                        t.image_url
-                    FROM thoughts t
-                    WHERE t.user_id = ? AND t.user_id != 0
-                    ORDER BY t.created_at DESC
-                    LIMIT ?
-                ''', (user_id, limit))
-                
-                # 結果を辞書のリストとして取得
-                columns = [column[0] for column in cursor.description]
-                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
-                
-                return result
-                
-            finally:
-                conn.close()
-        except sqlite3.Error as e:
-            logger.error(f"投稿の取得中にエラーが発生しました: {e}", exc_info=True)
-            raise
 
-    @app_commands.command(name="list", description="📜 投稿一覧")
-    @app_commands.describe(limit="表示する件数 (デフォルト: 10, 最大: 25)")
-    async def list_posts(self, interaction: discord.Interaction, limit: int = 10) -> None:
-        """自分の投稿一覧を表示します
+    @app_commands.command(name='list', description='📋 投稿一覧を表示')
+    async def list_posts(self, interaction: Interaction, 
+                         category: str = None, 
+                         limit: int = 10) -> None:
+        """
+        投稿一覧を表示するコマンド
         
         Args:
-            interaction: Discord インタラクションオブジェクト
-            limit: 表示する投稿の最大数 (1〜25)
-            
-        Raises:
-            Exception: 予期せぬエラーが発生した場合
+            interaction: Discordインタラクション
+            category: フィルタリングするカテゴリー（任意）
+            limit: 表示件数（デフォルト10件）
         """
-        # DMの場合は無効化
-        if isinstance(interaction.channel, discord.DMChannel):
-            await interaction.response.send_message(
-                "❌ このコマンドはDMでは使用できません。サーバー内でお試しください。", 
-                ephemeral=True
-            )
-            return
-            
         try:
-            # 即座に応答して処理中であることを伝える
             await interaction.response.defer(ephemeral=True)
-            logger.info(f"投稿一覧の取得を開始: user_id={interaction.user.id}, limit={limit}")
             
-            # 入力バリデーション
-            # limit = max(1, min(25, limit))  # 1〜25件に制限（コメントアウト）
-            limit = max(1, limit)  # 無制限に設定
+            # 投稿を取得
+            posts = self.file_manager.get_all_posts()
             
-            # データベースから投稿を取得
-            try:
-                posts = await self._fetch_user_posts(interaction.user.id, limit)
-                
-                if not posts:
-                    embed = discord.Embed(
-                        title="📭 投稿がありません",
-                        description="まだ投稿がありません。`/post` コマンドで新しい投稿を作成しましょう！",
-                        color=discord.Color.blue()
-                    )
-                    return await interaction.followup.send(embed=embed, ephemeral=True)
-                
-                # ページネーションの設定
-                items_per_page = 3  # 1ページあたりの表示数
-                pages = []
-                
-                for i in range(0, len(posts), items_per_page):
-                    embed = discord.Embed(
-                        title=f"📋 {interaction.user.display_name} さんの投稿一覧",
-                        color=discord.Color.blue()
-                    )
-                    
-                    for post in posts[i:i + items_per_page]:
-                        try:
-                            post_id = post['id']
-                            content = post['content'] or "（内容なし）"
-                            category = post['category'] or "（カテゴリーなし）"
-                            is_private = post['is_private']
-                            display_name = post['display_name'] or interaction.user.display_name
-                            
-                            # 内容が長すぎる場合は省略（無制限に設定）
-                            # display_content = content[:100] + '...' if len(content) > 100 else content
-                            display_content = content  # 無制限に設定
-                            
-                            # 投稿情報を追加
-                            field_value = f"{display_content}\n"
-                            field_value += f"カテゴリー: {category}\n"
-                            if is_private:
-                                field_value += "🔒 非公開\n"
-                            
-                            # 添付ファイル情報を処理
-                            if post.get('image_url'):
-                                field_value += "\n🖼️ 画像が添付されています"
-                                
-                                # 最初の画像をサムネイルとして設定
-                                if not embed.thumbnail and len(embed.fields) == 0:
-                                    # 最初の投稿の最初の画像のみをサムネイルに設定
-                                    embed.set_thumbnail(url=post['image_url'])
-                            
-                            # 投稿をフィールドとして追加
-                            embed.add_field(
-                                name=f"ID: {post_id} | {display_name}",
-                                value=field_value,
-                                inline=False
-                            )
-                            
-                        except Exception as e:
-                            logger.error(f"投稿の処理中にエラーが発生しました (post_id: {post.get('id', 'unknown')}): {e}", 
-                                       exc_info=True)
-                            # エラーが発生した投稿はスキップ
-                            continue
-                    
-                    # 1ページ分の埋め込みを追加
-                    if embed.fields:  # フィールドが空でない場合のみ追加
-                        pages.append(embed)
-                
-                if not pages:
-                    error_embed = discord.Embed(
-                        title="❌ エラー",
-                        description="表示可能な投稿が見つかりませんでした。",
-                        color=discord.Color.red()
-                    )
-                    return await interaction.followup.send(embed=error_embed, ephemeral=True)
-                
-                try:
-                    # ページネーションのビューを作成
-                    view = PaginationView(pages, 0, interaction.user.id)
-                    
-                    # 最初のページを表示
-                    message = await interaction.followup.send(embed=pages[0], view=view, 
-                                                           wait=True, ephemeral=True)
-                    
-                    # ビューにメッセージを設定
-                    view.message = message
-                    
-                except discord.HTTPException as e:
-                    logger.error(f"メッセージの送信中にエラーが発生しました: {e}", exc_info=True)
-                    error_embed = discord.Embed(
-                        title="❌ エラー",
-                        description="メッセージの送信中にエラーが発生しました。もう一度お試しください。",
-                        color=discord.Color.red()
-                    )
-                    await interaction.followup.send(embed=error_embed, ephemeral=True)
-                
-            except sqlite3.Error as e:
-                logger.error(f"データベースエラーが発生しました: {e}", exc_info=True)
-                error_embed = discord.Embed(
-                    title="❌ データベースエラー",
-                    description=f"投稿の読み込み中にエラーが発生しました。\nエラー詳細: `{str(e)}`",
-                    color=discord.Color.red()
+            if not posts:
+                embed = Embed(
+                    title="📋 投稿一覧",
+                    description="投稿がありません。",
+                    color=discord.Color.blue()
                 )
-                await interaction.followup.send(embed=error_embed, ephemeral=True)
-                
-        except Exception as e:
-            logger.critical(f"予期せぬエラーが発生しました: {e}", exc_info=True)
-            try:
-                error_embed = discord.Embed(
-                    title="❌ エラー",
-                    description="予期せぬエラーが発生しました。しばらくしてから再度お試しください。",
-                    color=discord.Color.red()
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # カテゴリーでフィルタリング
+            if category:
+                posts = [post for post in posts if post.get('category') == category]
+            
+            if not posts:
+                embed = Embed(
+                    title=f"📋 カテゴリー「{category}」の投稿一覧",
+                    description="指定されたカテゴリーの投稿がありません。",
+                    color=discord.Color.blue()
                 )
-                await interaction.followup.send(embed=error_embed, ephemeral=True)
-            except Exception as e:
-                logger.error(f"エラーメッセージの送信中にエラーが発生しました: {e}", exc_info=True)
-
-class PaginationView(discord.ui.View):
-    def __init__(self, pages, current_page, user_id):
-        super().__init__(timeout=300)  # 5分に延長
-        self.pages = pages
-        self.current_page = current_page
-        self.user_id = user_id
-        self.message = None
-        self.update_buttons()
-    
-    def update_buttons(self):
-        # すべてのボタンをクリア
-        self.clear_items()
-        
-        # ボタンのスタイルを定義
-        first_disabled = self.current_page == 0
-        last_disabled = self.current_page >= len(self.pages) - 1
-        
-        # ボタンを追加
-        buttons = [
-            ('<<', 'first', first_disabled, discord.ButtonStyle.secondary),
-            ('<', 'prev', first_disabled, discord.ButtonStyle.primary),
-            (f'{self.current_page + 1}/{len(self.pages)}', 'page', True, discord.ButtonStyle.gray),
-            ('>', 'next', last_disabled, discord.ButtonStyle.primary),
-            ('>>', 'last', last_disabled, discord.ButtonStyle.secondary)
-        ]
-        
-        for label, custom_id, disabled, style in buttons:
-            button = discord.ui.Button(
-                style=style,
-                label=label,
-                custom_id=custom_id,
-                disabled=disabled
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # 作成日時でソート
+            posts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            # 件数制限
+            posts = posts[:limit]
+            
+            # Embedを作成
+            embed = Embed(
+                title="📋 投稿一覧",
+                description=f"全{len(posts)}件の投稿を表示",
+                color=discord.Color.blue()
             )
-            button.callback = self.button_callback
-            self.add_item(button)
-    
-    async def button_callback(self, interaction: discord.Interaction):
-        # ボタンを押したユーザーを確認
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("この操作は許可されていません。", ephemeral=True)
-            return
             
-        # ボタンIDに応じてページを更新
-        custom_id = interaction.data['custom_id']
+            for post in posts:
+                # 投稿者情報
+                if post.get('is_anonymous'):
+                    author = "匿名"
+                else:
+                    author = post.get('display_name') or "名無し"
+                
+                # 投稿内容（短く）
+                content = post.get('content', '')
+                content_preview = content[:100] + "..." if len(content) > 100 else content
+                
+                # 公開/非公開ステータス
+                status = "🔒 非公開" if post.get('is_private') else "🌐 公開"
+                
+                # カテゴリー
+                cat = post.get('category') or "未分類"
+                
+                # フィールドを追加
+                embed.add_field(
+                    name=f"ID: {post['id']} - {author} ({status})",
+                    value=f"**カテゴリー:** {cat}\n**内容:** {content_preview}",
+                    inline=False
+                )
+            
+            embed.set_footer(text=f"最新{limit}件を表示")
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            logger.error(f"listコマンド実行中にエラーが発生しました: {e}", exc_info=True)
+            error_embed = Embed(
+                title="❌ エラーが発生しました",
+                description="投稿一覧の取得中にエラーが発生しました。もう一度お試しください。",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=error_embed, ephemeral=True)
+
+    @app_commands.command(name='my_posts', description='📝 自分の投稿一覧を表示')
+    async def my_posts(self, interaction: Interaction, limit: int = 10) -> None:
+        """
+        自分の投稿一覧を表示するコマンド
         
+        Args:
+            interaction: Discordインタラクション
+            limit: 表示件数（デフォルト10件）
+        """
         try:
-            if custom_id == 'first':
-                self.current_page = 0
-            elif custom_id == 'prev' and self.current_page > 0:
-                self.current_page -= 1
-            elif custom_id == 'next' and self.current_page < len(self.pages) - 1:
-                self.current_page += 1
-            elif custom_id == 'last':
-                self.current_page = len(self.pages) - 1
+            await interaction.response.defer(ephemeral=True)
             
-            # ボタンの状態を更新
-            self.update_buttons()
+            # ユーザーの投稿を取得
+            posts = self.file_manager.search_posts(user_id=str(interaction.user.id))
             
-            # メッセージを編集
-            await interaction.response.edit_message(
-                embed=self.pages[self.current_page],
-                view=self
+            if not posts:
+                embed = Embed(
+                    title="📝 自分の投稿一覧",
+                    description="あなたの投稿がありません。",
+                    color=discord.Color.blue()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # 作成日時でソート
+            posts.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            # 件数制限
+            posts = posts[:limit]
+            
+            # Embedを作成
+            embed = Embed(
+                title="📝 自分の投稿一覧",
+                description=f"あなたの投稿全{len(posts)}件を表示",
+                color=discord.Color.blue()
             )
+            
+            for post in posts:
+                # 投稿内容（短く）
+                content = post.get('content', '')
+                content_preview = content[:100] + "..." if len(content) > 100 else content
+                
+                # 公開/非公開ステータス
+                status = "🔒 非公開" if post.get('is_private') else "🌐 公開"
+                
+                # カテゴリー
+                cat = post.get('category') or "未分類"
+                
+                # フィールドを追加
+                embed.add_field(
+                    name=f"ID: {post['id']} ({status})",
+                    value=f"**カテゴリー:** {cat}\n**内容:** {content_preview}",
+                    inline=False
+                )
+            
+            embed.set_footer(text=f"最新{limit}件を表示")
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
             
         except Exception as e:
-            logger.error(f"ページネーション処理中にエラーが発生しました: {e}", exc_info=True)
-            await interaction.followup.send(
-                "ページの更新中にエラーが発生しました。",
-                ephemeral=True
+            logger.error(f"my_postsコマンド実行中にエラーが発生しました: {e}", exc_info=True)
+            error_embed = Embed(
+                title="❌ エラーが発生しました",
+                description="自分の投稿一覧の取得中にエラーが発生しました。もう一度お試しください。",
+                color=discord.Color.red()
             )
-    
-    async def on_timeout(self):
-        # タイムアウト時にボタンを無効化
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-        
-        if self.message:
-            try:
-                await self.message.edit(view=self)
-            except:
-                pass
+            await interaction.followup.send(embed=error_embed, ephemeral=True)
 
-async def setup(bot):
-    await bot.add_cog(List(bot))
+    @app_commands.command(name='categories', description='📁 カテゴリー一覧を表示')
+    async def list_categories(self, interaction: Interaction) -> None:
+        """
+        カテゴリー一覧を表示するコマンド
+        
+        Args:
+            interaction: Discordインタラクション
+        """
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            # 全投稿を取得
+            posts = self.file_manager.get_all_posts()
+            
+            if not posts:
+                embed = Embed(
+                    title="📁 カテゴリー一覧",
+                    description="投稿がありません。",
+                    color=discord.Color.blue()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # カテゴリーを集計
+            category_counts = {}
+            for post in posts:
+                cat = post.get('category') or "未分類"
+                category_counts[cat] = category_counts.get(cat, 0) + 1
+            
+            if not category_counts:
+                embed = Embed(
+                    title="📁 カテゴリー一覧",
+                    description="カテゴリーがありません。",
+                    color=discord.Color.blue()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # Embedを作成
+            embed = Embed(
+                title="📁 カテゴリー一覧",
+                description=f"全{len(category_counts)}個のカテゴリー",
+                color=discord.Color.blue()
+            )
+            
+            # カテゴリーを投稿数でソート
+            sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+            
+            for category, count in sorted_categories:
+                embed.add_field(
+                    name=f"📁 {category}",
+                    value=f"{count}件の投稿",
+                    inline=True
+                )
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            logger.error(f"categoriesコマンド実行中にエラーが発生しました: {e}", exc_info=True)
+            error_embed = Embed(
+                title="❌ エラーが発生しました",
+                description="カテゴリー一覧の取得中にエラーが発生しました。もう一度お試しください。",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=error_embed, ephemeral=True)
+
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップ"""
+    try:
+        await bot.add_cog(List(bot))
+        logger.info("List cog がセットアップされました")
+    except Exception as e:
+        logger.error(f"List cog セットアップ中にエラーが発生しました: {e}", exc_info=True)
+        raise

@@ -1,371 +1,123 @@
-from __future__ import annotations
-
-import asyncio
-import contextlib
 import logging
 import os
-import sqlite3
 import sys
-from typing import Optional, List, Dict, Any, Union
+from typing import List
 
 import discord
 from discord.ext import commands
-from discord import app_commands
-from dotenv import load_dotenv
 
-# ロギングの設定
+# ロガーの設定
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('bot.log', encoding='utf-8')
-    ],
-    force=True  # 既存の設定を上書き
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# DEBUGログを強制的に出力
-logger.debug("DEBUGモードが有効です")
-
-# 環境変数の読み込み
-load_dotenv()
-
-# インテントの設定
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-
-class DatabaseMixin:
-    """データベース接続を管理するMixinクラス"""
-    
-    def __init__(self):
-        # GitHub Actions環境とローカル環境でデータベースパスを分岐
-        if os.getenv('GITHUB_ACTIONS'):
-            # GitHub Actions環境
-            self.db_path = os.path.join(os.getcwd(), 'bot.db')
-            # データベースディレクトリを作成
-            db_dir = os.path.dirname(self.db_path)
-            if not os.path.exists(db_dir):
-                os.makedirs(db_dir, exist_ok=True)
-        else:
-            # ローカル環境
-            self.db_path = os.path.join(os.path.dirname(__file__), 'bot.db')
-        
-        logger.info(f"データベースパス: {self.db_path}")
-        
-        # データベースが存在しない場合は作成
-        self._ensure_database_exists()
-    
-    def _ensure_database_exists(self):
-        """データベースとテーブルが存在することを確認"""
-        try:
-            # データベースファイルが存在するか確認
-            db_exists = os.path.exists(self.db_path)
-            
-            if db_exists:
-                # 既存データベースの場合はデータの存在を確認
-                with sqlite3.connect(self.db_path, timeout=30.0) as conn:
-                    cursor = conn.cursor()
-                    
-                    # thoughtsテーブルの存在とデータ確認
-                    cursor.execute("""
-                        SELECT name FROM sqlite_master 
-                        WHERE type='table' AND name='thoughts'
-                    """)
-                    thoughts_table = cursor.fetchone()
-                    
-                    if thoughts_table:
-                        # テーブルが存在する場合はデータ数を確認
-                        cursor.execute("SELECT COUNT(*) FROM thoughts")
-                        data_count = cursor.fetchone()[0]
-                        
-                        if data_count > 0:
-                            logger.info(f"✅ 既存データベースを使用します（投稿数: {data_count}）")
-                            # パフォーマンス最適化のみ実行
-                            cursor.execute('PRAGMA journal_mode=WAL')
-                            cursor.execute('PRAGMA synchronous=NORMAL')
-                            cursor.execute('PRAGMA cache_size=-2000')
-                            conn.commit()
-                            return
-                        else:
-                            logger.info("📝 データベースは空ですが、テーブルは存在します")
-                    else:
-                        logger.info("🔧 thoughtsテーブルが存在しません")
-            
-            # 新規作成またはテーブルが存在しない場合
-            logger.info("🆕 データベースを初期化します")
-            with sqlite3.connect(self.db_path, timeout=30.0) as conn:
-                cursor = conn.cursor()
-                
-                # thoughtsテーブルを作成
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS thoughts (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
-                        content TEXT NOT NULL,
-                        category TEXT,
-                        image_url TEXT,
-                        is_anonymous INTEGER DEFAULT 0,
-                        is_private INTEGER DEFAULT 0,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        display_name TEXT
-                    )
-                ''')
-                
-                # message_referencesテーブルを作成
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS message_references (
-                        post_id INTEGER PRIMARY KEY,
-                        message_id TEXT NOT NULL,
-                        channel_id TEXT NOT NULL,
-                        user_id,
-                        FOREIGN KEY (post_id) REFERENCES thoughts (id) ON DELETE CASCADE
-                    )
-                ''')
-                
-                # インデックスを作成
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_thoughts_user_id ON thoughts (user_id)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_thoughts_created_at ON thoughts (created_at)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_thoughts_category ON thoughts (category)')
-                
-                # パフォーマンス最適化
-                cursor.execute('PRAGMA journal_mode=WAL')
-                cursor.execute('PRAGMA synchronous=NORMAL')
-                cursor.execute('PRAGMA cache_size=-2000')
-                
-                conn.commit()
-                logger.info("✅ データベースの初期化が完了しました")
-                
-        except sqlite3.Error as e:
-            logger.error(f"データベース初期化エラー: {e}")
-            raise
-    
-    @contextlib.contextmanager
-    def _get_db_connection(self):
-        """データベース接続を取得するコンテキストマネージャ"""
-        conn = sqlite3.connect(
-            self.db_path,
-            timeout=30.0,
-            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
-        )
-        conn.row_factory = sqlite3.Row
-        
-        try:
-            yield conn
-        except sqlite3.Error as e:
-            logger.error(f"データベースエラー: {e}")
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-    
-    @contextlib.contextmanager
-    def _get_cursor(self, conn):
-        """カーソルを取得するコンテキストマネージャ"""
-        cursor = conn.cursor()
-        try:
-            yield cursor
-        except Exception as e:
-            logger.error(f"カーソルエラー: {e}")
-            raise
-        finally:
-            cursor.close()
-
-class ThoughtBot(commands.Bot, DatabaseMixin):
+class ThoughtBot(commands.Bot):
     """メインボットクラス"""
     
     def __init__(self):
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.members = True
+        
         super().__init__(
-            command_prefix=commands.when_mentioned_or('!'),
+            command_prefix=commands.when_mentioned_or(),
             intents=intents,
+            help_command=None,
             application_id=os.getenv('APPLICATION_ID'),
             activity=discord.Game(name="/help でヘルプを表示")
         )
-        DatabaseMixin.__init__(self)
     
     async def setup_hook(self):
         """起動時の初期化処理"""
-        # コマンドツリーのクリアは行わない（各Cogのsetupで登録するため）
-        logger.info('🔄 拡張機能の読み込みを開始します...')
+        logger.info("ボットの初期化を開始します...")
         
-        # コグの読み込み
-        loaded_extensions = []
-        failed_extensions = []
+        # Cogの読み込み
+        await self.load_cogs()
         
-        # 必要な拡張機能の順序を定義（依存関係がある場合に備えて）
-        required_extensions = [
-            'cogs.thoughts.post',
-            'cogs.thoughts.delete',
-            'cogs.thoughts.list',
-            'cogs.thoughts.search',
-            'cogs.thoughts.actions',  # いいね・リプライ用
-            'cogs.thoughts.delete_actions',  # いいね・リプライ削除用
-            'cogs.thoughts.edit',
-            'cogs.thoughts.edit_reply',
-            'cogs.thoughts.restore_messages',  # メッセージ整理用
-            'cogs.thoughts.data_recovery',  # データ復元用
-            'cogs.thoughts.user_fix',  # 投稿者情報修正用
-            'cogs.thoughts.help',
-        ]
+        logger.info("ボットの初期化が完了しました")
+    
+    async def load_cogs(self):
+        """Cogを読み込む"""
+        cogs_dir = "cogs"
         
-        # 拡張機能をロード
-        for ext in required_extensions:
-            try:
-                # 既に読み込まれている場合は一度アンロード
-                if ext in self.extensions:
-                    await self.unload_extension(ext)
-                    logger.info(f'🔄 拡張機能をアンロードしました: {ext}')
-                
-                # 拡張機能をロード
-                await self.load_extension(ext)
-                loaded_extensions.append(ext)
-                logger.info(f'✅ 拡張機能を読み込みました: {ext}')
-                
-            except Exception as e:
-                failed_extensions.append((ext, str(e)))
-                logger.error(f'❌ 拡張機能の読み込みに失敗しました: {ext} - {e}', exc_info=True)
+        if not os.path.exists(cogs_dir):
+            logger.warning(f"Cogディレクトリが見つかりません: {cogs_dir}")
+            return
         
-        # 読み込み結果をログに出力
-        if loaded_extensions:
-            logger.info(f'✅ 読み込みに成功した拡張機能 ({len(loaded_extensions)}/{len(required_extensions)}):\n' + 
-                      '\n'.join(f'  • {ext}' for ext in loaded_extensions))
-        
-        if failed_extensions:
-            logger.warning('❌ 読み込みに失敗した拡張機能:')
-            for ext, error in failed_extensions:
-                logger.warning(f'  • {ext}: {error}')
-        
-        # コマンドツリーを同期
-        try:
-            # 同期前に登録されているコマンドを確認
-            before_sync_commands = {cmd.name for cmd in self.tree.get_commands()}
-            logger.info(f'同期前の登録コマンド数: {len(before_sync_commands)}')
-            logger.info(f'同期前の登録コマンド: {before_sync_commands}')
-            
-            # post コマンドが登録されているか確認
-            post_cog = self.get_cog('Post')
-            if post_cog:
-                logger.info('Post cog は正常に読み込まれています')
-                logger.info(f'Post cog のメソッド: {[name for name, _ in post_cog.get_commands()]}')
-            else:
-                logger.warning('Post cog が読み込まれていません')
-            
-            # コマンドツリーを同期
-            synced = await self.tree.sync()
-            logger.info(f'✅ コマンドを同期しました: {len(synced)} 件')
-            
-            # 同期後のコマンドを確認
-            registered_commands = self.tree.get_commands()
-            logger.info(f'同期後の登録コマンド数: {len(registered_commands)}')
-            
-            # 登録されているコマンドをログに出力
-            if registered_commands:
-                logger.info('登録されているコマンド一覧:')
-                for cmd in registered_commands:
-                    cmd_info = f'  • /{cmd.name}'
-                    if hasattr(cmd, 'description'):
-                        cmd_info += f' - {cmd.description}'
-                    logger.info(cmd_info)
-            
-            # 必要なコマンドがすべて登録されているか確認
-            required_commands = {
-                'post', 'delete', 'list', 'search', 'edit', 'help', 'restore_messages',
-                'backup_database', 'list_backups', 'restore_backup', 'check_database', 'cleanup_orphaned',
-                'recover_from_messages'
-            }
-            registered_command_names = {cmd.name for cmd in registered_commands}
-            missing_commands = required_commands - registered_command_names
-            
-            if missing_commands:
-                logger.warning(f'⚠️ 以下の必須コマンドが登録されていません: {missing_commands}')
-                
-                # editコマンドの場合は再読み込みをスキップ（応答なし問題対策）
-                filtered_missing = [cmd for cmd in missing_commands if cmd != 'edit']
-                
-                if filtered_missing:
-                    # 不足しているコマンドがある場合は、該当する拡張機能を再読み込み
-                    for cmd in filtered_missing:
-                        ext_name = f'cogs.thoughts.{cmd}'
-                        try:
-                            # 既存の拡張機能をアンロード
-                            if ext_name in self.extensions:
-                                await self.unload_extension(ext_name)
-                                logger.info(f'✅ 拡張機能をアンロードしました: {ext_name}')
-                                
-                            # 拡張機能を再読み込み
-                            await self.load_extension(ext_name)
-                            logger.info(f'✅ 拡張機能を再読み込みしました: {ext_name}')
-                            
-                        except Exception as e:
-                            logger.error(f'❌ 拡張機能の再読み込みに失敗しました: {ext_name} - {e}')
-                    
-                    # 再同期を試みる
-                    try:
-                        synced = await self.tree.sync()
-                        logger.info(f'✅ コマンドを再同期しました: {len(synced)} 件')
-                        
-                        # 再同期後のコマンドを確認
-                        commands = self.tree.get_commands()
-                        logger.info(f'再同期後の登録コマンド数: {len(commands)}')
-                    except Exception as e:
-                        logger.error(f'❌ コマンドの再同期に失敗しました: {e}')
-                else:
-                    logger.info('editコマンドのみ未登録のため、再読み込みをスキップします')
-            
-        except Exception as e:
-            logger.error(f'❌ コマンドの同期に失敗しました: {e}', exc_info=True)
-            
-            # 再試行
-            try:
-                synced = await self.tree.sync()
-                logger.info(f'🔄 コマンドツリーを再同期しました: {len(synced)} コマンド')
-            except Exception as e:
-                logger.error(f'❌ コマンドツリーの再同期に失敗しました: {e}', exc_info=True)
+        for filename in os.listdir(cogs_dir):
+            if filename.endswith(".py"):
+                try:
+                    cog_path = f"cogs.{filename[:-3]}"
+                    await self.load_extension(cog_path)
+                    logger.info(f"Cogを読み込みました: {cog_path}")
+                except Exception as e:
+                    logger.error(f"Cogの読み込みに失敗しました: {cog_path} - {e}")
     
     async def on_ready(self):
-        """ボットの準備が完了したときに呼び出される"""
-        logger.info(f'✅ ログインしました: {self.user} (ID: {self.user.id})')
-        logger.info('------')
-
-        # 拡張機能の読み込み状態を確認
-        logger.info('読み込まれている拡張機能:')
-        for ext in self.extensions:
-            logger.info(f'  • {ext}')
-            
-        # 登録されているコマンドを確認
-        commands = self.tree.get_commands()
-        logger.info(f'現在登録されているコマンド数: {len(commands)}')
+        """ボット準備完了時の処理"""
+        logger.info(f"ボットがログインしました: {self.user}")
+        logger.info(f"サーバー数: {len(self.guilds)}")
         
-        # 登録されているコマンドを表示
-        if commands:
-            logger.info('登録されているコマンド一覧:')
-            for cmd in commands:
-                cmd_info = f'  • /{cmd.name}'
-                if hasattr(cmd, 'description'):
-                    cmd_info += f' - {cmd.description}'
-                logger.info(cmd_info)
+        # スラッシュコマンドを同期
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"スラッシュコマンドを同期しました: {len(synced)}個")
+        except Exception as e:
+            logger.error(f"スラッシュコマンドの同期に失敗しました: {e}")
+    
+    async def on_guild_join(self, guild):
+        """サーバー参加時の処理"""
+        logger.info(f"新しいサーバーに参加しました: {guild.name} (ID: {guild.id})")
+        
+        # スラッシュコマンドを同期
+        try:
+            synced = await self.tree.sync(guild=guild)
+            logger.info(f"サーバー {guild.name} でスラッシュコマンドを同期しました: {len(synced)}個")
+        except Exception as e:
+            logger.error(f"サーバー {guild.name} でのスラッシュコマンド同期に失敗しました: {e}")
+    
+    async def on_command_error(self, ctx, error):
+        """コマンドエラー時の処理"""
+        if isinstance(error, commands.CommandNotFound):
+            return
+        
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("このコマンドを実行する権限がありません。")
+            return
+        
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("必要な引数が不足しています。")
+            return
+        
+        logger.error(f"コマンドエラー: {error}")
+        await ctx.send("コマンドの実行中にエラーが発生しました。")
+    
+    async def on_error(self, event_method, *args, **kwargs):
+        """イベントエラー時の処理"""
+        logger.error(f"イベントエラー: {event_method} - {args} - {kwargs}")
 
 def main():
-    # ボットのインスタンスを作成
+    """メイン関数"""
+    # 環境変数の確認
+    if not os.getenv('DISCORD_TOKEN'):
+        logger.error("DISCORD_TOKEN環境変数が設定されていません")
+        return
+    
+    if not os.getenv('APPLICATION_ID'):
+        logger.error("APPLICATION_ID環境変数が設定されていません")
+        return
+    
+    # ボットの起動
     bot = ThoughtBot()
     
-    # トークンの確認
-    TOKEN = os.getenv('DISCORD_TOKEN')
-    if not TOKEN:
-        logger.error('❌ 環境変数 DISCORD_TOKEN が設定されていません')
-        sys.exit(1)
-    
-    # ボットを起動
     try:
-        bot.run(TOKEN)
-    except discord.LoginFailure:
-        logger.error('❌ ログインに失敗しました。トークンが無効です。')
-        sys.exit(1)
+        bot.run(os.getenv('DISCORD_TOKEN'))
+    except KeyboardInterrupt:
+        logger.info("ボットを停止します")
     except Exception as e:
-        logger.error(f'❌ ボットの起動中にエラーが発生しました: {e}')
-        sys.exit(1)
+        logger.error(f"ボットの起動中にエラーが発生しました: {e}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

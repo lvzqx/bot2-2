@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 async def sync_to_github(action_description: str, user_name: str = None, post_id: int = None):
     """
-    データベースの変更をGitHubに同期する
+    ファイルベースのデータ変更をGitHubに同期する
     
     Args:
         action_description: アクションの説明 (例: "edit", "delete", "like")
@@ -21,23 +21,18 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
         str: GitHub同期の結果メッセージ
     """
     try:
-        # bot.dbのパスを取得
-        bot_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
+        # dataディレクトリのパスを取得
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
         
         # 強制的に変更を検知させるための処理
-        import sqlite3
-        conn = sqlite3.connect(bot_db_path)
-        cursor = conn.cursor()
-        
-        # git_sync_markerテーブルを作成してダミーデータを挿入
-        cursor.execute('CREATE TABLE IF NOT EXISTS git_sync_marker (timestamp TEXT)')
-        cursor.execute('INSERT OR REPLACE INTO git_sync_marker (timestamp) VALUES (?)', 
-                      (datetime.now().isoformat(),))
-        conn.commit()
-        conn.close()
+        # タイムスタンプファイルを作成
+        timestamp_file = os.path.join(data_dir, '.last_sync')
+        with open(timestamp_file, 'w') as f:
+            f.write(datetime.now().isoformat())
         
         # ファイルのタイムスタンプを更新
-        os.utime(bot_db_path)
+        if os.path.exists(data_dir):
+            os.utime(data_dir)
         
         # コミットメッセージを作成
         if post_id and user_name:
@@ -48,7 +43,7 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
             commit_message = f"🔄 {action_description.capitalize()} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
         # git add
-        subprocess.run(['git', 'add', bot_db_path], 
+        subprocess.run(['git', 'add', 'data/'], 
                      capture_output=True, text=True, check=True)
         
         # 必ずコミット（変更チェックなし）
@@ -96,7 +91,7 @@ async def sync_to_github(action_description: str, user_name: str = None, post_id
                     logger.error("最終手段：クリーンな強制コミットを実行します")
                     subprocess.run(['git', 'add', '-A'], 
                                  capture_output=True, text=True, check=False)
-                    subprocess.run(['git', 'commit', '-m', f'🔄 Database sync - {action_description} - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'], 
+                    subprocess.run(['git', 'commit', '-m', f'🔄 File sync - {action_description} - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'], 
                                  capture_output=True, text=True, check=False)
                     subprocess.run(['git', 'push', 'origin', 'main', '--force'], 
                                  capture_output=True, text=True, check=False)

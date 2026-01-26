@@ -38,11 +38,17 @@ def get_channel_id(channel_type):
 # デフォルトチャンネル設定（URL形式で保持）
 DEFAULT_CHANNELS = {
     'public': 'https://discord.com/channels/1449421401609212088/1457611087561101332',  # 公開用チャンネル
-    'private': 'https://discord.com/channels/1449421401609212088/1457611128225009666'  # 非公開用チャンネル
+    'private': 'https://discord.com/channels/1449421401609212088/1457611128225009666',  # 非公開用チャンネル
+    'replies': 'https://discord.com/channels/1449421401609212088/1463449710445461578',  # リプライ用チャンネル
+    'likes': 'https://discord.com/channels/1449421401609212088/1465341010274947092',  # いいね用チャンネル
+    'search': 'https://discord.com/channels/1449421401609212088/1465353465374179492'  # 検索用チャンネル
 }
 
 # 現在のチャンネル設定（URLをそのまま使用）
 CHANNELS = {
     'public': DEFAULT_CHANNELS['public'],
-    'private': DEFAULT_CHANNELS['private']
+    'private': DEFAULT_CHANNELS['private'],
+    'replies': DEFAULT_CHANNELS['replies'],
+    'likes': DEFAULT_CHANNELS['likes'],
+    'search': DEFAULT_CHANNELS['search']
 }

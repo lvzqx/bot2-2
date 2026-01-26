@@ -1,12 +1,17 @@
 import logging
-import sqlite3
-import json
+import os
 from typing import Dict, Any
 from datetime import datetime
 
 import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
+
+# ファイルマネージャーをインポート
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from file_manager import FileManager
+from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +20,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
     
     def __init__(self):
         super().__init__(timeout=300)
+        self.file_manager = FileManager()
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -33,23 +39,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             post_id = int(self.post_id_input.value.strip())
             
             # 投稿情報を取得
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            # thoughtsテーブルの存在確認
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='thoughts'")
-            if not cursor.fetchone():
-                await interaction.followup.send(
-                    "データベースが初期化されていません。",
-                    ephemeral=True
-                )
-                conn.close()
-                return
-            
-            cursor.execute('SELECT content, user_id FROM thoughts WHERE id = ?', (post_id,))
-            post = cursor.fetchone()
+            post = self.file_manager.get_post(post_id)
             
             if not post:
                 await interaction.followup.send(
@@ -58,25 +48,47 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                     "※正しい投稿IDを入力してください。",
                     ephemeral=True
                 )
-                conn.close()
                 return
             
-            post_content = post[0]
-            post_user_id = post[1]
+            post_content = post.get('content', '')
+            post_user_id = post.get('user_id', '')
             
-            # アクションを記録
-            await self._log_action(interaction.user.id, 'like', post_id, {
-                'post_content': post_content[:100],
-                'post_user_id': post_user_id
-            })
+            # いいねを保存
+            like_id = self.file_manager.save_like(
+                post_id=post_id,
+                user_id=str(interaction.user.id),
+                display_name=interaction.user.display_name
+            )
+            
+            # いいね用チャンネルに投稿
+            likes_channel_url = get_channel_id('likes')
+            likes_channel_id = extract_channel_id(likes_channel_url)
+            likes_channel = interaction.guild.get_channel(likes_channel_id)
+            
+            if likes_channel:
+                embed = discord.Embed(
+                    title="❤️ いいね！",
+                    description=f"**投稿ID: {post_id}**\n\n{post_content[:200]}{'...' if len(post_content) > 200 else ''}",
+                    color=discord.Color.red()
+                )
+                embed.add_field(name="いいねした人", value=interaction.user.display_name, inline=True)
+                embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
+                embed.set_footer(text=f"いいねID: {like_id}")
+                
+                await likes_channel.send(embed=embed)
             
             # 元の投稿メッセージを取得
-            cursor.execute('''
-                SELECT message_id, channel_id 
-                FROM message_references 
-                WHERE post_id = ?
-            ''', (post_id,))
-            message_ref = cursor.fetchone()
+            message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
+            message_ref = None
+            
+            if os.path.exists(message_ref_file):
+                try:
+                    import json
+                    with open(message_ref_file, 'r', encoding='utf-8') as f:
+                        message_ref_data = json.load(f)
+                        message_ref = (message_ref_data.get('message_id'), message_ref_data.get('channel_id'))
+                except (json.JSONDecodeError, FileNotFoundError):
+                    message_ref = None
             
             if message_ref:
                 try:
@@ -132,12 +144,9 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                     ephemeral=True
                 )
             
-            conn.close()
-            
             # GitHubに保存する処理
             from .github_sync import sync_to_github
-            github_result = await sync_to_github("like", interaction.user.name, post_id)
-            logger.info(f"GitHub同期結果: {github_result}")
+            await sync_to_github("like", interaction.user.name, post_id)
             
         except ValueError:
             await interaction.followup.send(
@@ -152,31 +161,25 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             )
     
     async def _log_action(self, user_id: int, action_type: str, target_id: int, action_data: Dict[str, Any]) -> None:
-        """アクションをデータベースに記録"""
+        """アクションをファイルに記録"""
         try:
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
+            import json
+            action_record = {
+                "user_id": user_id,
+                "action_type": action_type,
+                "target_id": target_id,
+                "action_data": action_data,
+                "created_at": datetime.now().isoformat()
+            }
             
-            # テーブル存在確認
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='actions_user'")
-            if cursor.fetchone():
-                cursor.execute('''
-                    INSERT INTO actions_user (user_id, action_type, target_id, action_data)
-                    VALUES (?, ?, ?, ?)
-                ''', (
-                    user_id,
-                    action_type,
-                    target_id,
-                    str(action_data)
-                ))
-                conn.commit()
-                logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
-            else:
-                logger.warning("actions_userテーブルが存在しません")
+            # アクションファイルを作成
+            action_filename = os.path.join("data", f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            os.makedirs("data", exist_ok=True)
             
-            conn.close()
+            with open(action_filename, 'w', encoding='utf-8') as f:
+                json.dump(action_record, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
             
         except Exception as e:
             logger.error(f"アクション記録中にエラーが発生しました: {e}", exc_info=True)
@@ -187,6 +190,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
     
     def __init__(self):
         super().__init__(timeout=300)
+        self.file_manager = FileManager()
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -215,20 +219,13 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             reply_content = self.reply_input.value.strip()
             
             # 親投稿の存在確認
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute('SELECT id, content FROM thoughts WHERE id = ?', (post_id,))
-            parent_post = cursor.fetchone()
+            parent_post = self.file_manager.get_post(post_id)
             
             if not parent_post:
                 await interaction.followup.send(
                     "💬 指定された投稿が見つかりませんでした。",
                     ephemeral=True
                 )
-                conn.close()
                 return
             
             # アクションを記録
@@ -237,121 +234,95 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 'parent_id': post_id
             })
             
-            # リプライをデータベースに保存
-            cursor.execute('''
-                INSERT INTO replies (post_id, user_id, content, display_name, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                post_id,  # 親投稿ID
-                interaction.user.id,
-                reply_content,
-                interaction.user.display_name,
-                datetime.now().isoformat()
-            ))
+            # リプライをファイルに保存
+            reply_id = self.file_manager.save_reply(
+                post_id=post_id,
+                user_id=str(interaction.user.id),
+                content=reply_content,
+                display_name=interaction.user.display_name
+            )
             
-            conn.commit()
+            # リプライ用チャンネルに投稿
+            replies_channel_url = get_channel_id('replies')
+            replies_channel_id = extract_channel_id(replies_channel_url)
+            replies_channel = interaction.guild.get_channel(replies_channel_id)
             
-            # 「リプライ」チャンネルを取得
-            reply_channel = discord.utils.get(interaction.guild.text_channels, name="リプライ")
+            if replies_channel:
+                embed = discord.Embed(
+                    title="💬 リプライ",
+                    description=f"**投稿ID: {post_id}**\n\n{reply_content[:500]}{'...' if len(reply_content) > 500 else ''}",
+                    color=discord.Color.blue()
+                )
+                embed.add_field(name="リプライした人", value=interaction.user.display_name, inline=True)
+                embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
+                embed.add_field(name="元の投稿", value=parent_post.get('content', '')[:100] + '...' if len(parent_post.get('content', '')) > 100 else parent_post.get('content', ''), inline=False)
+                embed.set_footer(text=f"リプライID: {reply_id}")
+                
+                await replies_channel.send(embed=embed)
             
-            logger.info(f"リプライチャンネル検索結果: {reply_channel}")
+            logger.info(f"リプライチャンネル検索結果: {replies_channel}")
             logger.info(f"サーバーのチャンネル一覧: {[ch.name for ch in interaction.guild.text_channels]}")
             
-            if reply_channel:
-                logger.info(f"リプライチャンネルが見つかりました: {reply_channel.id}")
+            if replies_channel:
+                logger.info(f"リプライチャンネルが見つかりました: {replies_channel.id}")
                 # 元の投稿メッセージを取得
-                cursor.execute('''
-                    SELECT message_id, channel_id 
-                    FROM message_references 
-                    WHERE post_id = ?
-                ''', (post_id,))
-                message_ref = cursor.fetchone()
+                message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
+                message_ref = None
                 
-                logger.info(f"メッセージ参照検索結果: {message_ref}")
+                if os.path.exists(message_ref_file):
+                    try:
+                        import json
+                        with open(message_ref_file, 'r', encoding='utf-8') as f:
+                            message_ref_data = json.load(f)
+                            message_ref = (message_ref_data.get('message_id'), message_ref_data.get('channel_id'))
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        message_ref = None
                 
                 if message_ref:
-                    # 元の投稿があったチャンネルから投稿を取得
-                    original_channel = interaction.guild.get_channel(int(message_ref[1]))
-                    
-                    logger.info(f"元のチャンネル検索結果: {original_channel}")
-                    
-                    if original_channel:
-                        try:
-                            # 元の投稿メッセージを取得
-                            message = await original_channel.fetch_message(int(message_ref[0]))
+                    try:
+                        # メッセージを取得してリプライ
+                        channel = interaction.guild.get_channel(int(message_ref[1]))
+                        if channel:
+                            message = await channel.fetch_message(int(message_ref[0]))
                             
-                            logger.info(f"元のメッセージ取得成功: {message.id}")
-                            
-                            # ボットの権限をチェック
-                            bot_permissions = reply_channel.permissions_for(interaction.guild.me)
-                            logger.info(f"ボットの権限: {bot_permissions}")
-                            
-                            if not bot_permissions.read_message_history:
-                                logger.warning("ボットにメッセージ履歴を読む権限がありません")
-                                raise PermissionError("read_message_history")
-                            
-                            # Discordの公式転送機能を使用
-                            forwarded_message = await message.forward(reply_channel)
-                            
-                            # 転送されたメッセージにリプライとして投稿
-                            reply_embed = discord.Embed(
-                                color=discord.Color.blue()
-                            )
-                            
-                            reply_embed.add_field(
-                                name="💬 リプライ内容",
-                                value=reply_content,
-                                inline=False
-                            )
-                            
-                            reply_embed.add_field(
-                                name="👤 リプライ投稿者",
-                                value=interaction.user.display_name,
-                                inline=True
-                            )
-                            
-                            # 転送されたメッセージにリプライとして送信
-                            reply_message = await reply_channel.send(
-                                embed=reply_embed,
-                                reference=forwarded_message  # 転送メッセージへのリプライ
-                            )
-                            
-                            # メッセージIDを保存（後の編集用）
-                            cursor.execute('''
-                                UPDATE replies 
-                                SET message_id = ?
-                                WHERE post_id = ? AND user_id = ?
-                            ''', (reply_message.id, post_id, interaction.user.id))
-                            conn.commit()
-                            
-                            await interaction.followup.send(
-                                f"💬 **リプライを投稿しました！**\n\n"
-                                f"投稿に返信しました。\n"
-                                f"📢 「リプライ」チャンネルに転送されました！",
-                                ephemeral=True
-                            )
-                            
-                            # GitHubに保存する処理
-                            from .github_sync import sync_to_github
-                            await sync_to_github("reply", interaction.user.name, post_id)
-                        
-                        except Exception as e:
-                            logger.error(f"元の投稿の転送中にエラー: {e}")
-                            # 転送失敗時は何もしない - エラーのみ記録
+                            # リプライ処理
+                            try:
+                                reply_message = f"💬リプライ：{interaction.user.display_name}\n{reply_content}"
+                                await message.reply(reply_message)
+                                
+                                await interaction.followup.send(
+                                    f"💬 **リプライしました！**\n\n"
+                                    f"投稿にリプライしました！",
+                                    ephemeral=True
+                                )
+                            except discord.Forbidden:
+                                await interaction.followup.send(
+                                    f"💬 **リプライしました！**\n\n"
+                                    f"投稿にリプライしました！\n"
+                                    f"※権限がないため、メッセージを送信できませんでした。",
+                                    ephemeral=True
+                                )
+                    except discord.NotFound:
+                        logger.warning(f"元の投稿メッセージが見つかりません: {message_ref[0]}")
+                        await interaction.followup.send(
+                            f"💬 **リプライしました！**\n\n"
+                            f"投稿にリプライしました！\n"
+                            f"※元の投稿メッセージが見つかりませんでした。",
+                            ephemeral=True
+                        )
                 else:
                     await interaction.followup.send(
-                        f"💬 **エラーが発生しました**\n\n"
-                        f"元の投稿チャンネルが見つかりません。",
+                        f"💬 **リプライしました！**\n\n"
+                        f"投稿にリプライしました！",
                         ephemeral=True
                     )
             else:
                 await interaction.followup.send(
-                    f"💬 **エラーが発生しました**\n\n"
-                    f"「リプライ」チャンネルが見つかりません。",
+                    f"💬 **リプライしました！**\n\n"
+                    f"投稿にリプライしました！\n"
+                    f"※リプライチャンネルが見つかりませんでした。",
                     ephemeral=True
                 )
-            
-            conn.close()
             
         except ValueError:
             await interaction.followup.send(
@@ -366,31 +337,25 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             )
     
     async def _log_action(self, user_id: int, action_type: str, target_id: int, action_data: Dict[str, Any]) -> None:
-        """アクションをデータベースに記録"""
+        """アクションをファイルに記録"""
         try:
-            import os
-            db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bot.db')
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
+            import json
+            action_record = {
+                "user_id": user_id,
+                "action_type": action_type,
+                "target_id": target_id,
+                "action_data": action_data,
+                "created_at": datetime.now().isoformat()
+            }
             
-            # テーブル存在確認
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='actions_user'")
-            if cursor.fetchone():
-                cursor.execute('''
-                    INSERT INTO actions_user (user_id, action_type, target_id, action_data)
-                    VALUES (?, ?, ?, ?)
-                ''', (
-                    user_id,
-                    action_type,
-                    target_id,
-                    str(action_data)
-                ))
-                conn.commit()
-                logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
-            else:
-                logger.warning("actions_userテーブルが存在しません")
+            # アクションファイルを作成
+            action_filename = os.path.join("data", f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            os.makedirs("data", exist_ok=True)
             
-            conn.close()
+            with open(action_filename, 'w', encoding='utf-8') as f:
+                json.dump(action_record, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
             
         except Exception as e:
             logger.error(f"アクション記録中にエラーが発生しました: {e}", exc_info=True)
