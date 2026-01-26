@@ -56,7 +56,7 @@ class Post(commands.Cog):
             
             self.category = ui.TextInput(
                 label='📁 カテゴリー',
-                placeholder='カテゴリー（任意）',
+                placeholder='カテゴリーを入力（任意）',
                 required=False,
                 style=discord.TextStyle.short,
                 max_length=50
@@ -64,13 +64,24 @@ class Post(commands.Cog):
             
             self.image_url = ui.TextInput(
                 label='🖼️ 画像URL',
-                placeholder='画像URL（任意）',
+                placeholder='画像URLを入力（任意）',
                 required=False,
                 style=discord.TextStyle.short,
                 max_length=500
             )
             
-            self.visibility = self.VisibilitySelect()
+            visibility_options = [
+                discord.SelectOption(label='公開', value='public', description='誰でも見ることができます', emoji='👥'),
+                discord.SelectOption(label='非公開', value='private', description='自分と管理者のみが削除できます', emoji='🔒')
+            ]
+            
+            self.visibility = ui.Select(
+                placeholder='公開設定を選択...',
+                min_values=1,
+                max_values=1,
+                options=visibility_options,
+                default='public'
+            )
             
             self.anonymous = ui.TextInput(
                 label='👤 匿名設定',
@@ -101,17 +112,14 @@ class Post(commands.Cog):
                 message = self.message.value
                 category = self.category.value if self.category.value else None
                 image_url = self.image_url.value if self.image_url.value else None
-                visibility_value = (self.visibility.value or "").strip().lower()
+                # visibilityはSelectなのでvalues[0]で取得
+                visibility_value = (self.visibility.values[0] if self.visibility.values else "public").strip().lower()
                 if visibility_value in {"公開", "public"}:
                     is_public = True
                 elif visibility_value in {"非公開", "private"}:
                     is_public = False
                 else:
-                    await interaction.followup.send(
-                        "❌ 公開設定が無効です。「公開」または「非公開」を選択してください。",
-                        ephemeral=True
-                    )
-                    return
+                    is_public = True  # デフォルトは公開
                 is_anonymous = self.anonymous.value.lower() == '匿名'
                 
                 # データベースに保存
