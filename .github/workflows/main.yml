@@ -14,7 +14,10 @@ jobs:
     # 同じコミットに対して同時に複数のワークフローが実行されないようにする
     concurrency: 
       group: bot-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
+    
+    # タイムアウトを設定して無限実行を防ぐ
+    timeout-minutes: 60
     
     steps:
     - uses: actions/checkout@v3
@@ -213,8 +216,8 @@ jobs:
         
         echo "ボットが正常に起動しました"
         
-        # 無限ループで待機
-        while true; do
+        # 55分間実行して終了（次のワークフローが引き継ぐ）
+        for i in {1..55}; do
           # ボットがまだ実行中か確認
           if ! ps -p $(cat temp/bot.pid) > /dev/null; then
             echo "ボットが終了しました。再起動します..."
@@ -226,7 +229,11 @@ jobs:
           fi
           # 1分ごとにチェック
           sleep 60
+          echo "実行中... ($i/55分)"
         done
+        
+        echo "55分経過しました。ボットは実行を継続します"
+        echo "次のワークフローが起動したら自然に引き継がれます"
     
     - name: Skip automatic backup
       run: |
