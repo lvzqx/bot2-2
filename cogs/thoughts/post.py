@@ -70,9 +70,19 @@ class Post(commands.Cog):
                 max_length=500
             )
             
+            self.visibility = ui.TextInput(
+                label='🌐 公開設定 (公開/非公開)',
+                placeholder='公開または非公開を入力',
+                required=False,
+                style=discord.TextStyle.short,
+                max_length=10,
+                default='公開'
+            )
+            
             self.add_item(self.message)
             self.add_item(self.category)
             self.add_item(self.image_url)
+            self.add_item(self.visibility)
 
         async def on_submit(self, interaction: Interaction) -> None:
             """投稿内容をデータベースに保存"""
@@ -89,9 +99,20 @@ class Post(commands.Cog):
                 message = self.message.value
                 category = self.category.value if self.category.value else None
                 image_url = self.image_url.value if self.image_url.value else None
-                # デフォルト値を設定
-                is_public = True  # デフォルトは公開
-                is_anonymous = False  # デフォルトは表示
+                
+                # 公開設定を処理
+                visibility_value = (self.visibility.value or "").strip().lower()
+                if visibility_value in {"公開", "public"}:
+                    is_public = True
+                elif visibility_value in {"非公開", "private"}:
+                    is_public = False
+                else:
+                    is_public = True  # デフォルトは公開
+                
+                # 匿名設定はメッセージ内容で判断（先頭に「匿名:」があれば匿名）
+                is_anonymous = message.startswith('匿名:')
+                if is_anonymous:
+                    message = message[3:].strip()  # 「匿名:」を削除
                 
                 # データベースに保存
                 try:
