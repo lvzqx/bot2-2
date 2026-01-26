@@ -112,8 +112,9 @@ temp/
 cache/
 logs/
 backups/
-bot.db.*
-*.db.*
+# bot.dbはGitHubで管理するため無視しない
+# bot.db.*
+# *.db.*
 bot.log
 bot.pid
 *.log
