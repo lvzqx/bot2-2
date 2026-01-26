@@ -215,7 +215,7 @@ jobs:
         
         echo "ボットが正常に起動しました"
         
-        # 無限ループで実行し続ける
+        # 無限ループで待機
         while true; do
           # ボットがまだ実行中か確認
           if ! ps -p $(cat temp/bot.pid) > /dev/null; then
@@ -228,7 +228,6 @@ jobs:
           fi
           # 1分ごとにチェック
           sleep 60
-          echo "無限実行中..."
         done
     
     - name: Skip automatic backup
