@@ -1,0 +1,2 @@
+# This file ensures the data directory is tracked by Git
+# The actual data files will be managed by the file_manager.py system
