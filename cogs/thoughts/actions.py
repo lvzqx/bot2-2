@@ -401,6 +401,27 @@ class UnlikeModal(ui.Modal, title="💔 いいねを削除"):
             
             # いいねファイルを削除
             if like_file_path and os.path.exists(like_file_path):
+                # ファイルからメッセージIDを取得して削除
+                try:
+                    with open(like_file_path, 'r', encoding='utf-8') as f:
+                        like_data = json.load(f)
+                        message_id = like_data.get('message_id')
+                        channel_id = like_data.get('channel_id')
+                    
+                    if message_id and channel_id:
+                        # いいねチャンネルのメッセージを削除
+                        likes_channel = interaction.guild.get_channel(int(channel_id))
+                        if likes_channel:
+                            try:
+                                like_message = await likes_channel.fetch_message(int(message_id))
+                                await like_message.delete()
+                                logger.info(f"いいねメッセージを削除しました: メッセージID={message_id}")
+                            except (discord.NotFound, discord.Forbidden):
+                                logger.warning(f"いいねメッセージの削除に失敗しました: {message_id}")
+                except (json.JSONDecodeError, FileNotFoundError):
+                    pass
+                
+                # ファイルを削除
                 os.remove(like_file_path)
                 logger.info(f"いいねを削除しました: 投稿ID={post_id}, ユーザーID={user_id}")
             else:
@@ -510,8 +531,38 @@ class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
                 return
             
             # リプライファイルを削除
-            os.remove(reply_file_path)
-            logger.info(f"リプライを削除しました: リプライID={reply_id}, ユーザーID={user_id}")
+            if reply_file_path and os.path.exists(reply_file_path):
+                # ファイルからメッセージIDを取得して削除
+                try:
+                    with open(reply_file_path, 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                        message_id = reply_data.get('message_id')
+                        channel_id = reply_data.get('channel_id')
+                    
+                    if message_id and channel_id:
+                        # リプライチャンネルのメッセージを削除
+                        replies_channel = interaction.guild.get_channel(int(channel_id))
+                        if replies_channel:
+                            try:
+                                reply_message = await replies_channel.fetch_message(int(message_id))
+                                await reply_message.delete()
+                                logger.info(f"リプライメッセージを削除しました: メッセージID={message_id}")
+                            except (discord.NotFound, discord.Forbidden):
+                                logger.warning(f"リプライメッセージの削除に失敗しました: {message_id}")
+                except (json.JSONDecodeError, FileNotFoundError):
+                    pass
+                
+                # ファイルを削除
+                os.remove(reply_file_path)
+                logger.info(f"リプライを削除しました: リプライID={reply_id}, ユーザーID={user_id}")
+            else:
+                logger.error(f"リプライファイルが見つかりません: {reply_file_path}")
+                await interaction.followup.send(
+                    "❌ **エラーが発生しました**\n\n"
+                    "リプライファイルが見つかりません。",
+                    ephemeral=True
+                )
+                return
             
             await interaction.followup.send(
                 f"🗑️ **リプライを削除しました**\n\n"
