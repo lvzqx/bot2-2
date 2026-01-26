@@ -79,10 +79,20 @@ class Post(commands.Cog):
                 default='公開'
             )
             
+            self.anonymous = ui.TextInput(
+                label='👤 匿名設定 (匿名/表示)',
+                placeholder='匿名にする場合は「匿名」を入力',
+                required=False,
+                style=discord.TextStyle.short,
+                max_length=10,
+                default='表示'
+            )
+            
             self.add_item(self.message)
             self.add_item(self.category)
             self.add_item(self.image_url)
             self.add_item(self.visibility)
+            self.add_item(self.anonymous)
 
         async def on_submit(self, interaction: Interaction) -> None:
             """投稿内容をデータベースに保存"""
@@ -109,10 +119,12 @@ class Post(commands.Cog):
                 else:
                     is_public = True  # デフォルトは公開
                 
-                # 匿名設定はメッセージ内容で判断（先頭に「匿名:」があれば匿名）
-                is_anonymous = message.startswith('匿名:')
-                if is_anonymous:
-                    message = message[3:].strip()  # 「匿名:」を削除
+                # 匿名設定を処理
+                anonymous_value = (self.anonymous.value or "").strip().lower()
+                if anonymous_value in {"匿名", "anonymous"}:
+                    is_anonymous = True
+                else:
+                    is_anonymous = False  # デフォルトは表示
                 
                 # データベースに保存
                 try:
