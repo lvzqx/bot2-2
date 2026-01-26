@@ -86,7 +86,10 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                                 await original_message.forward(likes_channel)
                                 
                                 # いいねしたことを投稿
-                                await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
+                                like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
+                                
+                                # いいねファイルにメッセージIDを保存
+                                self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id))
                             else:
                                 # チャンネルが見つからない場合は従来通り
                                 like_embed = discord.Embed(
