@@ -325,61 +325,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                         
                         except Exception as e:
                             logger.error(f"元の投稿の転送中にエラー: {e}")
-                            # 転送に失敗した場合は、直接リプライを送信
-                            try:
-                                reply_embed = discord.Embed(
-                                    color=discord.Color.blue()
-                                )
-                                
-                                reply_embed.add_field(
-                                    name="💬 リプライ内容",
-                                    value=reply_content,
-                                    inline=False
-                                )
-                                
-                                reply_embed.add_field(
-                                    name="👤 リプライ投稿者",
-                                    value=interaction.user.display_name,
-                                    inline=True
-                                )
-                                
-                                reply_embed.add_field(
-                                    name="📝 元の投稿",
-                                    value=f"ID: {post_id}\n{parent_post[1][:100]}...",
-                                    inline=False
-                                )
-                                
-                                # 直接リプライチャンネルに送信（転送なし）
-                                reply_message = await reply_channel.send(embed=reply_embed)
-                                
-                                # メッセージIDを保存
-                                cursor.execute('''
-                                    UPDATE replies 
-                                    SET message_id = ?
-                                    WHERE post_id = ? AND user_id = ?
-                                ''', (reply_message.id, post_id, interaction.user.id))
-                                conn.commit()
-                                
-                                await interaction.followup.send(
-                                    f"💬 **リプライを投稿しました！**\n\n"
-                                    f"投稿に返信しました。\n"
-                                    f"📢 「リプライ」チャンネルに投稿されました！\n"
-                                    f"※転送はできませんでしたが、リプライは正常に投稿されました。",
-                                    ephemeral=True
-                                )
-                                
-                                # GitHubに保存する処理
-                                from .github_sync import sync_to_github
-                                await sync_to_github("reply", interaction.user.name, post_id)
-                                
-                            except Exception as fallback_error:
-                                logger.error(f"フォールバック処理中にもエラー: {fallback_error}")
-                                await interaction.followup.send(
-                                    f"💬 **エラーが発生しました**\n\n"
-                                    f"リプライの投稿に失敗しました。\n"
-                                    f"エラー: {str(e)[:100]}...",
-                                    ephemeral=True
-                                )
+                            # 転送失敗時は何もしない - エラーのみ記録
                 else:
                     await interaction.followup.send(
                         f"💬 **エラーが発生しました**\n\n"
