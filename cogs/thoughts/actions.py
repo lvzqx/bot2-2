@@ -425,6 +425,23 @@ class Actions(commands.Cog):
             except:
                 logger.error("リプライコマンドのエラーメッセージ送信に失敗しました")
     
+    @app_commands.command(name="unreply", description="🗑️ リプライを削除")
+    async def unreply_command(self, interaction: Interaction) -> None:
+        """リプライ削除コマンド"""
+        try:
+            logger.info(f"リプライ削除コマンド実行: ユーザー {interaction.user.name} (ID: {interaction.user.id})")
+            modal = UnreplyModal()
+            await interaction.response.send_modal(modal)
+        except Exception as e:
+            logger.error(f"リプライ削除コマンド実行中にエラーが発生しました: {e}", exc_info=True)
+            try:
+                await interaction.response.send_message(
+                    "エラーが発生しました。もう一度お試しください。",
+                    ephemeral=True
+                )
+            except:
+                logger.error("リプライ削除コマンドのエラーメッセージ送信に失敗しました")
+    
     @app_commands.command(name="unlike", description="💔 いいねを削除")
     async def unlike_command(self, interaction: Interaction) -> None:
         """いいね削除コマンド"""
@@ -573,6 +590,7 @@ async def setup(bot: commands.Bot) -> None:
         like_cmd = bot.tree.get_command('like')
         reply_cmd = bot.tree.get_command('reply')
         unlike_cmd = bot.tree.get_command('unlike')
+        unreply_cmd = bot.tree.get_command('unreply')
         
         if like_cmd:
             logger.info("✅ /like コマンドが正常に登録されました")
@@ -588,6 +606,11 @@ async def setup(bot: commands.Bot) -> None:
             logger.info("✅ /unlike コマンドが正常に登録されました")
         else:
             logger.error("❌ /unlike コマンドの登録に失敗しました")
+            
+        if unreply_cmd:
+            logger.info("✅ /unreply コマンドが正常に登録されました")
+        else:
+            logger.error("❌ /unreply コマンドの登録に失敗しました")
             
     except Exception as e:
         logger.error(f"Actions cog のセットアップ中にエラーが発生しました: {e}", exc_info=True)
