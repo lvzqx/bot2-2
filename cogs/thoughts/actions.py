@@ -579,6 +579,100 @@ class UnlikeModal(ui.Modal, title="💔 いいねを削除"):
             )
 
 
+class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
+    """リプライを削除するリプライIDを入力するモーダル"""
+    
+    def __init__(self):
+        super().__init__(timeout=300)
+        self.file_manager = FileManager()
+        
+        self.reply_id_input = ui.TextInput(
+            label="💬 リプライID",
+            placeholder="削除するリプライのIDを入力...",
+            required=True,
+            style=discord.TextStyle.short,
+            max_length=10
+        )
+        
+        self.add_item(self.reply_id_input)
+    
+    async def on_submit(self, interaction: Interaction) -> None:
+        """リプライ削除実行"""
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            reply_id = self.reply_id_input.value.strip()
+            user_id = str(interaction.user.id)
+            
+            # リプライファイルを検索
+            replies_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                                     'data', 'replies')
+            
+            reply_found = False
+            reply_file_path = None
+            reply_data = None
+            
+            if os.path.exists(replies_dir):
+                for filename in os.listdir(replies_dir):
+                    if filename.endswith('.json'):
+                        reply_file_path = os.path.join(replies_dir, filename)
+                        try:
+                            with open(reply_file_path, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            
+                            # リプライIDとユーザーが一致するか確認
+                            if (data.get('id') == reply_id and 
+                                data.get('user_id') == user_id):
+                                reply_found = True
+                                reply_data = data
+                                break
+                        except (json.JSONDecodeError, FileNotFoundError):
+                            continue
+            
+            if not reply_found:
+                await interaction.followup.send(
+                    "❌ **リプライが見つかりません**\n\n"
+                    f"リプライID: {reply_id} のリプライが見つからないか、あなたのリプライではありません。",
+                    ephemeral=True
+                )
+                return
+            
+            # Discordメッセージを削除
+            message_id = reply_data.get('message_id')
+            channel_id = reply_data.get('channel_id')
+            
+            if message_id and channel_id:
+                try:
+                    channel = interaction.guild.get_channel(int(channel_id))
+                    if channel:
+                        message = await channel.fetch_message(int(message_id))
+                        await message.delete()
+                        logger.info(f"リプライメッセージを削除しました: メッセージID={message_id}")
+                except (discord.NotFound, discord.Forbidden) as e:
+                    logger.warning(f"リプライメッセージの削除に失敗しました: {e}")
+            
+            # リプライファイルを削除
+            os.remove(reply_file_path)
+            logger.info(f"リプライを削除しました: リプライID={reply_id}, ユーザーID={user_id}")
+            
+            await interaction.followup.send(
+                f"🗑️ **リプライを削除しました**\n\n"
+                f"リプライID: {reply_id} のリプライを削除しました。",
+                ephemeral=True
+            )
+            
+            # GitHubに保存する処理
+            from .github_sync import sync_to_github
+            await sync_to_github("unreply", interaction.user.name, reply_id)
+            
+        except Exception as e:
+            logger.error(f"リプライ削除処理中にエラーが発生しました: {e}")
+            await interaction.followup.send(
+                "🗑️ エラーが発生しました。もう一度お試しください。",
+                ephemeral=True
+            )
+
+
 async def setup(bot: commands.Bot) -> None:
     """Cogをセットアップ"""
     try:
