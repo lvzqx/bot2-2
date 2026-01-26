@@ -602,32 +602,47 @@ class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
             reply_id = self.reply_id_input.value.strip()
             user_id = str(interaction.user.id)
             
+            logger.info(f"リプライ削除試行: リプライID={reply_id}, ユーザーID={user_id}")
+            
             # リプライファイルを検索
             replies_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
                                      'data', 'replies')
+            
+            logger.info(f"リプライディレクトリ: {replies_dir}")
             
             reply_found = False
             reply_file_path = None
             reply_data = None
             
             if os.path.exists(replies_dir):
-                for filename in os.listdir(replies_dir):
+                logger.info(f"リプライディレクトリが存在します")
+                files = os.listdir(replies_dir)
+                logger.info(f"リプライファイル一覧: {files}")
+                
+                for filename in files:
                     if filename.endswith('.json'):
                         reply_file_path = os.path.join(replies_dir, filename)
                         try:
                             with open(reply_file_path, 'r', encoding='utf-8') as f:
                                 data = json.load(f)
                             
+                            logger.info(f"ファイル {filename} のデータ: {data}")
+                            
                             # リプライIDとユーザーが一致するか確認
                             if (data.get('id') == reply_id and 
                                 data.get('user_id') == user_id):
                                 reply_found = True
                                 reply_data = data
+                                logger.info(f"リプライが見つかりました: {reply_file_path}")
                                 break
-                        except (json.JSONDecodeError, FileNotFoundError):
+                        except (json.JSONDecodeError, FileNotFoundError) as e:
+                            logger.error(f"ファイル読み込みエラー {filename}: {e}")
                             continue
+            else:
+                logger.warning(f"リプライディレクトリが存在しません: {replies_dir}")
             
             if not reply_found:
+                logger.warning(f"リプライが見つかりませんでした: リプライID={reply_id}, ユーザーID={user_id}")
                 await interaction.followup.send(
                     "❌ **リプライが見つかりません**\n\n"
                     f"リプライID: {reply_id} のリプライが見つからないか、あなたのリプライではありません。",
