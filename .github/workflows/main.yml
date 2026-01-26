@@ -125,6 +125,7 @@ jobs:
       id: check_bot
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
       run: |
         # 既存の実行中のワークフローをチェック
@@ -144,6 +145,7 @@ jobs:
       if: env.RUN_BOT == 'true'
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
       run: |
         # ボット起動時にデータディレクトリを指定
