@@ -36,7 +36,7 @@ class FileManager:
     def save_post(self, user_id: str, content: str, category: str = None, 
                   is_anonymous: bool = False, is_private: bool = False,
                   display_name: str = None, message_id: str = None, 
-                  channel_id: str = None) -> int:
+                  channel_id: str = None, image_url: str = None) -> int:
         """投稿を保存"""
         post_id = self.get_next_post_id()
         
@@ -51,7 +51,8 @@ class FileManager:
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             "message_id": message_id,
-            "channel_id": channel_id
+            "channel_id": channel_id,
+            "image_url": image_url
         }
         
         filename = os.path.join(self.posts_dir, f"{post_id}.json")
