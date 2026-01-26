@@ -66,16 +66,28 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             likes_channel = interaction.guild.get_channel(likes_channel_id)
             
             if likes_channel:
-                embed = discord.Embed(
+                # 元の投稿を転送
+                original_embed = discord.Embed(
+                    title=f"📝 投稿ID: {post_id}",
+                    description=post_content,
+                    color=discord.Color.blue()
+                )
+                original_embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
+                original_embed.add_field(name="カテゴリー", value=post.get('category', 'なし'), inline=True)
+                original_embed.set_footer(text=f"投稿日時: {post.get('created_at', '不明')}")
+                
+                await likes_channel.send(embed=original_embed)
+                
+                # いいねしたことを投稿
+                like_embed = discord.Embed(
                     title=f"❤️ いいね！：{interaction.user.display_name}",
-                    description=f"**投稿ID: {post_id}**\n\n{post_content[:200]}{'...' if len(post_content) > 200 else ''}",
+                    description=f"上記の投稿にいいねしました！",
                     color=discord.Color.red()
                 )
-                embed.add_field(name="いいねした人", value=interaction.user.display_name, inline=True)
-                embed.add_field(name="投稿者", value=post.get('display_name', '名無し'), inline=True)
-                embed.set_footer(text=f"いいねID: {like_id}")
+                like_embed.add_field(name="いいねした人", value=interaction.user.display_name, inline=True)
+                like_embed.set_footer(text=f"いいねID: {like_id}")
                 
-                await likes_channel.send(embed=embed)
+                await likes_channel.send(embed=like_embed)
             
             # 元の投稿メッセージを取得
             message_ref_file = os.path.join("data", f"message_ref_{post_id}.json")
@@ -248,17 +260,28 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             replies_channel = interaction.guild.get_channel(replies_channel_id)
             
             if replies_channel:
-                embed = discord.Embed(
-                    title="💬 リプライ",
-                    description=f"**投稿ID: {post_id}**\n\n{reply_content[:500]}{'...' if len(reply_content) > 500 else ''}",
+                # 元の投稿を転送
+                original_embed = discord.Embed(
+                    title=f"� 投稿ID: {post_id}",
+                    description=parent_post.get('content', ''),
                     color=discord.Color.blue()
                 )
-                embed.add_field(name="リプライした人", value=interaction.user.display_name, inline=True)
-                embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
-                embed.add_field(name="元の投稿", value=parent_post.get('content', '')[:100] + '...' if len(parent_post.get('content', '')) > 100 else parent_post.get('content', ''), inline=False)
-                embed.set_footer(text=f"リプライID: {reply_id}")
+                original_embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
+                original_embed.add_field(name="カテゴリー", value=parent_post.get('category', 'なし'), inline=True)
+                original_embed.set_footer(text=f"投稿日時: {parent_post.get('created_at', '不明')}")
                 
-                await replies_channel.send(embed=embed)
+                await replies_channel.send(embed=original_embed)
+                
+                # リプライを投稿
+                reply_embed = discord.Embed(
+                    title=f"💬 リプライ：{interaction.user.display_name}",
+                    description=reply_content,
+                    color=discord.Color.green()
+                )
+                reply_embed.add_field(name="リプライした人", value=interaction.user.display_name, inline=True)
+                reply_embed.set_footer(text=f"リプライID: {reply_id}")
+                
+                await replies_channel.send(embed=reply_embed)
             
             logger.info(f"リプライチャンネル検索結果: {replies_channel}")
             logger.info(f"サーバーのチャンネル一覧: {[ch.name for ch in interaction.guild.text_channels]}")
