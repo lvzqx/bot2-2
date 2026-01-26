@@ -93,8 +93,8 @@ class Post(commands.Cog):
             self.add_item(self.message)
             self.add_item(self.category)
             self.add_item(self.image_url)
-            self.add_item(self.visibility)
             self.add_item(self.anonymous)
+            self.add_item(self.visibility)
 
         async def on_submit(self, interaction: Interaction) -> None:
             """投稿内容をデータベースに保存"""
