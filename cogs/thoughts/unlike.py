@@ -80,13 +80,22 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
                 )
                 return
             
-            # Discordメッセージを削除
+            # Discordメッセージを削除（タイムアウト対策）
             message_id = like_data.get('message_id')
             channel_id = like_data.get('channel_id')
             forwarded_message_id = like_data.get('forwarded_message_id')
             
+            # まず成功メッセージを送信（タイムアウト防止）
+            await interaction.followup.send(
+                f"✅ いいねを削除しました！\n\n"
+                f"投稿ID: {post_id}\n"
+                f"投稿者: {post.get('display_name', '名無し')}\n"
+                f"内容: {post.get('content', '')[:100]}{'...' if len(post.get('content', '')) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # バックグラウンドでDiscordメッセージ削除
             if message_id and channel_id:
-                # いいねチャンネルのメッセージを削除
                 try:
                     likes_channel = interaction.guild.get_channel(int(channel_id))
                     if likes_channel:
@@ -122,13 +131,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
             else:
                 logger.warning(f"メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
             
-            await interaction.followup.send(
-                f"✅ いいねを削除しました！\n\n"
-                f"投稿ID: {post_id}\n"
-                f"投稿者: {post.get('display_name', '名無し')}\n"
-                f"内容: {post.get('content', '')[:100]}{'...' if len(post.get('content', '')) > 100 else ''}",
-                ephemeral=True
-            )
+            logger.info(f"いいね削除完了: 投稿ID={post_id}, ユーザーID={user_id}")
             
         except ValueError:
             await interaction.followup.send(

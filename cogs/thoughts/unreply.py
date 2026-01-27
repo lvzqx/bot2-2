@@ -72,13 +72,21 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
                 )
                 return
             
-            # Discordメッセージを削除
+            # Discordメッセージを削除（タイムアウト対策）
             message_id = reply_data.get('message_id')
             channel_id = reply_data.get('channel_id')
             forwarded_message_id = reply_data.get('forwarded_message_id')
             
+            # まず成功メッセージを送信（タイムアウト防止）
+            await interaction.followup.send(
+                f"✅ リプライを削除しました！\n\n"
+                f"リプライID: {reply_id}\n"
+                f"内容: {reply_data.get('content', '')[:100]}{'...' if len(reply_data.get('content', '')) > 100 else ''}",
+                ephemeral=True
+            )
+            
+            # バックグラウンドでDiscordメッセージ削除
             if message_id and channel_id:
-                # リプライチャンネルのメッセージを削除
                 try:
                     replies_channel = interaction.guild.get_channel(int(channel_id))
                     if replies_channel:
@@ -114,12 +122,7 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
             else:
                 logger.warning(f"メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
             
-            await interaction.followup.send(
-                f"✅ リプライを削除しました！\n\n"
-                f"リプライID: {reply_id}\n"
-                f"内容: {reply_data.get('content', '')[:100]}{'...' if len(reply_data.get('content', '')) > 100 else ''}",
-                ephemeral=True
-            )
+            logger.info(f"リプライ削除完了: リプライID={reply_id}, ユーザーID={user_id}")
             
         except ValueError:
             await interaction.followup.send(
