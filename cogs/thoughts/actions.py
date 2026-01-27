@@ -464,40 +464,36 @@ class UnlikeModal(ui.Modal, title="💔 いいねを削除"):
                 )
                 return
             
-            # ユーザーのいいねを検索
+            # いいねファイルを直接検索
             likes_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                    'data', 'likes')
+                                   'data', 'likes')
             
             logger.info(f"いいね削除試行: 投稿ID={post_id}, ユーザーID={user_id}")
             logger.info(f"いいねディレクトリ: {likes_dir}")
             
+            like_file_path = os.path.join(likes_dir, f"like_{post_id}_{user_id}.json")
             like_found = False
-            like_file_path = None
+            like_data = None
             
-            if os.path.exists(likes_dir):
-                logger.info(f"いいねディレクトリが存在します")
-                files = os.listdir(likes_dir)
-                logger.info(f"いいねファイル一覧: {files}")
-                
-                for filename in files:
-                    if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
-                        like_file_path = os.path.join(likes_dir, filename)
-                        try:
-                            with open(like_file_path, 'r', encoding='utf-8') as f:
-                                like_data = json.load(f)
-                            
-                            logger.info(f"ファイル {filename} のデータ: {like_data}")
-                            
-                            # いいねしたユーザーが一致するか確認
-                            if like_data.get('user_id') == user_id:
-                                like_found = True
-                                logger.info(f"いいねが見つかりました: {like_file_path}")
-                                break
-                        except (json.JSONDecodeError, FileNotFoundError) as e:
-                            logger.error(f"ファイル読み込みエラー {filename}: {e}")
-                            continue
+            logger.info(f"検索するファイル: {like_file_path}")
+            
+            if os.path.exists(like_file_path):
+                try:
+                    with open(like_file_path, 'r', encoding='utf-8') as f:
+                        like_data = json.load(f)
+                    
+                    logger.info(f"ファイルデータ: {like_data}")
+                    
+                    # ユーザーが一致するか確認
+                    if like_data.get('user_id') == user_id:
+                        like_found = True
+                        logger.info(f"いいねが見つかりました: {like_file_path}")
+                    else:
+                        logger.warning(f"ユーザーが一致しません: ファイルのuser_id={like_data.get('user_id')}, 要求user_id={user_id}")
+                except (json.JSONDecodeError, FileNotFoundError) as e:
+                    logger.error(f"ファイル読み込みエラー {like_file_path}: {e}")
             else:
-                logger.warning(f"いいねディレクトリが存在しません: {likes_dir}")
+                logger.warning(f"いいねファイルが存在しません: {like_file_path}")
             
             if not like_found:
                 logger.warning(f"いいねが見つかりませんでした: 投稿ID={post_id}, ユーザーID={user_id}")
@@ -572,42 +568,35 @@ class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
             
             logger.info(f"リプライ削除試行: リプライID={reply_id}, ユーザーID={user_id}")
             
-            # リプライファイルを検索
+            # リプライファイルを直接検索
             replies_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
                                      'data', 'replies')
             
             logger.info(f"リプライディレクトリ: {replies_dir}")
             
+            reply_file_path = os.path.join(replies_dir, f"reply_{reply_id}.json")
             reply_found = False
-            reply_file_path = None
             reply_data = None
             
-            if os.path.exists(replies_dir):
-                logger.info(f"リプライディレクトリが存在します")
-                files = os.listdir(replies_dir)
-                logger.info(f"リプライファイル一覧: {files}")
-                
-                for filename in files:
-                    if filename.endswith('.json'):
-                        reply_file_path = os.path.join(replies_dir, filename)
-                        try:
-                            with open(reply_file_path, 'r', encoding='utf-8') as f:
-                                data = json.load(f)
-                            
-                            logger.info(f"ファイル {filename} のデータ: {data}")
-                            
-                            # リプライIDとユーザーが一致するか確認
-                            if (data.get('id') == reply_id and 
-                                data.get('user_id') == user_id):
-                                reply_found = True
-                                reply_data = data
-                                logger.info(f"リプライが見つかりました: {reply_file_path}")
-                                break
-                        except (json.JSONDecodeError, FileNotFoundError) as e:
-                            logger.error(f"ファイル読み込みエラー {filename}: {e}")
-                            continue
+            logger.info(f"検索するファイル: {reply_file_path}")
+            
+            if os.path.exists(reply_file_path):
+                try:
+                    with open(reply_file_path, 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                    
+                    logger.info(f"ファイルデータ: {reply_data}")
+                    
+                    # ユーザーが一致するか確認
+                    if reply_data.get('user_id') == user_id:
+                        reply_found = True
+                        logger.info(f"リプライが見つかりました: {reply_file_path}")
+                    else:
+                        logger.warning(f"ユーザーが一致しません: ファイルのuser_id={reply_data.get('user_id')}, 要求user_id={user_id}")
+                except (json.JSONDecodeError, FileNotFoundError) as e:
+                    logger.error(f"ファイル読み込みエラー {reply_file_path}: {e}")
             else:
-                logger.warning(f"リプライディレクトリが存在しません: {replies_dir}")
+                logger.warning(f"リプライファイルが存在しません: {reply_file_path}")
             
             if not reply_found:
                 logger.warning(f"リプライが見つかりませんでした: リプライID={reply_id}, ユーザーID={user_id}")
