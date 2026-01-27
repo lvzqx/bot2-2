@@ -168,6 +168,48 @@ class FileManager:
         
         return like_id
     
+    def update_like_message_id(self, like_id: int, message_id: str, channel_id: str) -> None:
+        """いいねファイルにメッセージIDを更新"""
+        # 全いいねファイルを検索
+        for filename in os.listdir(self.likes_dir):
+            if filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.likes_dir, filename), 'r', encoding='utf-8') as f:
+                        like_data = json.load(f)
+                    
+                    if like_data.get('id') == like_id:
+                        # メッセージIDを追加・更新
+                        like_data['message_id'] = message_id
+                        like_data['channel_id'] = channel_id
+                        
+                        # ファイルを更新
+                        with open(os.path.join(self.likes_dir, filename), 'w', encoding='utf-8') as f:
+                            json.dump(like_data, f, ensure_ascii=False, indent=2)
+                        break
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+    
+    def update_reply_message_id(self, reply_id: int, message_id: str, channel_id: str) -> None:
+        """リプライファイルにメッセージIDを更新"""
+        # 全リプライファイルを検索
+        for filename in os.listdir(self.replies_dir):
+            if filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                    
+                    if reply_data.get('id') == reply_id:
+                        # メッセージIDを追加・更新
+                        reply_data['message_id'] = message_id
+                        reply_data['channel_id'] = channel_id
+                        
+                        # ファイルを更新
+                        with open(os.path.join(self.replies_dir, filename), 'w', encoding='utf-8') as f:
+                            json.dump(reply_data, f, ensure_ascii=False, indent=2)
+                        break
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+    
     def get_likes(self, post_id: int) -> List[Dict[str, Any]]:
         """投稿のいいねを取得"""
         likes = []
