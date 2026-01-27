@@ -228,19 +228,18 @@ class FileManager:
     
     def save_message_ref(self, post_id: int, message_id: str, channel_id: str, user_id: str) -> None:
         """メッセージ参照を保存"""
-        # メッセージ参照専用フォルダーを作成
-        message_ref_dir = os.path.join(self.base_dir, 'data', 'message_refs')
+        message_ref_dir = os.path.join(self.base_dir, 'message_refs')
         os.makedirs(message_ref_dir, exist_ok=True)
         
-        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
-        
         message_ref_data = {
-            'post_id': post_id,
-            'message_id': message_id,
-            'channel_id': channel_id,
-            'user_id': user_id,
-            'created_at': datetime.now().isoformat()
+            "post_id": post_id,
+            "message_id": message_id,
+            "channel_id": channel_id,
+            "user_id": user_id,
+            "created_at": datetime.now().isoformat()
         }
+        
+        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
         
         with open(message_ref_file, 'w', encoding='utf-8') as f:
             json.dump(message_ref_data, f, ensure_ascii=False, indent=2)
@@ -249,7 +248,7 @@ class FileManager:
     
     def get_message_ref(self, post_id: int) -> Optional[Dict[str, Any]]:
         """メッセージ参照を取得"""
-        message_ref_dir = os.path.join(self.base_dir, 'data', 'message_refs')
+        message_ref_dir = os.path.join(self.base_dir, 'message_refs')
         message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
         
         if not os.path.exists(message_ref_file):
@@ -424,33 +423,6 @@ class FileManager:
                         break
                 except (json.JSONDecodeError, FileNotFoundError):
                     continue
-    
-    def save_message_ref(self, post_id: int, message_id: str, channel_id: str, user_id: str) -> None:
-        """メッセージ参照を保存"""
-        message_ref_data = {
-            "post_id": post_id,
-            "message_id": message_id,
-            "channel_id": channel_id,
-            "user_id": user_id,
-            "created_at": datetime.now().isoformat()
-        }
-        
-        filename = os.path.join(self.base_dir, f"message_ref_{post_id}.json")
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(message_ref_data, f, ensure_ascii=False, indent=2)
-    
-    def get_message_ref(self, post_id: int) -> Optional[Dict[str, Any]]:
-        """メッセージ参照を取得"""
-        filename = os.path.join(self.base_dir, f"message_ref_{post_id}.json")
-        
-        if os.path.exists(filename):
-            try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, FileNotFoundError):
-                pass
-        
-        return None
     
     def get_likes(self, post_id: int) -> List[Dict[str, Any]]:
         """投稿のいいねを取得"""
