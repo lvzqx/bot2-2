@@ -79,48 +79,48 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                     channel_id = message_ref_data.get('channel_id')
                     
                     if message_id and channel_id:
-                        # 元の投稿メッセージを取得
-                        original_channel = interaction.guild.get_channel(int(channel_id))
-                        if original_channel:
+                        try:
                             # 元の投稿メッセージを取得
-                            original_message = await original_channel.fetch_message(int(message_id))
-                            
-                            # 元の投稿を転送
-                            forwarded_message = await original_message.forward(replies_channel)
-                            
-                            # リプライを投稿
-                            reply_embed = discord.Embed(
-                                title=f"💬 リプライ：{interaction.user.display_name}",
-                                description=reply_content,
-                                color=discord.Color.green()
-                            )
-                            reply_embed.set_footer(text=f"リプライID: {reply_id}")
-                            reply_message = await replies_channel.send(embed=reply_embed)
-                            
-                            # リプライファイルに両方のメッセージIDを保存
-                            self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
+                            original_channel = interaction.guild.get_channel(int(channel_id))
+                            if original_channel:
+                                # 元の投稿メッセージを取得
+                                original_message = await original_channel.fetch_message(int(message_id))
+                                
+                                # 元の投稿を転送
+                                forwarded_message = await original_message.forward(replies_channel)
+                                
+                                # リプライを投稿
+                                reply_embed = discord.Embed(
+                                    title=f"💬 リプライ：{interaction.user.display_name}",
+                                    description=reply_content,
+                                    color=discord.Color.green()
+                                )
+                                reply_embed.set_footer(text=f"リプライID: {reply_id}")
+                                reply_message = await replies_channel.send(embed=reply_embed)
+                                
+                                # リプライファイルに両方のメッセージIDを保存
+                                self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
+                            else:
+                                logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")
+                                raise Exception("元のチャンネルが見つかりません")
+                        except discord.NotFound:
+                            logger.warning(f"メッセージが見つかりません: message_id={message_id}")
+                            raise Exception("メッセージが見つかりません")
+                        except discord.Forbidden:
+                            logger.warning(f"メッセージへのアクセス権限がありません: message_id={message_id}")
+                            raise Exception("メッセージへのアクセス権限がありません")
+                        except Exception as e:
+                            logger.error(f"メッセージ取得エラー: {e}")
+                            raise Exception(f"メッセージ取得エラー: {e}")
                     else:
-                        # チャンネルが見つからない場合は従来通り
-                        reply_embed = discord.Embed(
-                            title=f"💬 {interaction.user.display_name}がリプライしました",
-                            description=f"**投稿ID: {post_id}へのリプライ**\n\n{reply_content}",
-                            color=discord.Color.green()
-                        )
-                        reply_embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
-                        reply_embed.set_footer(text=f"リプライID: {reply_id}")
-                        reply_message = await replies_channel.send(embed=reply_embed)
-                        self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id))
+                        logger.warning(f"メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
+                        raise Exception("メッセージIDまたはチャンネルIDがありません")
                 else:
-                    # メッセージ参照がない場合は従来通り
-                    reply_embed = discord.Embed(
-                        title=f"💬 {interaction.user.display_name}がリプライしました",
-                        description=f"**投稿ID: {post_id}へのリプライ**\n\n{reply_content}",
-                        color=discord.Color.green()
-                    )
-                    reply_embed.add_field(name="投稿者", value=parent_post.get('display_name', '名無し'), inline=True)
-                    reply_embed.set_footer(text=f"リプライID: {reply_id}")
-                    reply_message = await replies_channel.send(embed=reply_embed)
-                    self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id))
+                    logger.warning(f"メッセージ参照が見つかりません: post_id={post_id}")
+                    raise Exception("メッセージ参照が見つかりません")
+            else:
+                logger.warning(f"repliesチャンネルが見つかりません: replies_channel_id={replies_channel_id}")
+                raise Exception("repliesチャンネルが見つかりません")
             
             # 専用チャンネルへの転送のみで完了
             await interaction.followup.send(

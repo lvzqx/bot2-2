@@ -86,8 +86,15 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
                         reply_message = await replies_channel.fetch_message(int(message_id))
                         await reply_message.delete()
                         logger.info(f"リプライメッセージを削除しました: メッセージID={message_id}")
-                    except (discord.NotFound, discord.Forbidden):
-                        logger.warning(f"リプライメッセージの削除に失敗しました: {message_id}")
+                    except discord.NotFound:
+                        logger.warning(f"リプライメッセージが見つかりません: メッセージID={message_id}")
+                        raise Exception("リプライメッセージが見つかりません")
+                    except discord.Forbidden:
+                        logger.warning(f"リプライメッセージの削除権限がありません: メッセージID={message_id}")
+                        raise Exception("リプライメッセージの削除権限がありません")
+                    except Exception as e:
+                        logger.error(f"リプライメッセージ削除エラー: {e}")
+                        raise Exception(f"リプライメッセージ削除エラー: {e}")
                     
                     # 転送メッセージも削除
                     if forwarded_message_id:
@@ -95,8 +102,19 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
                             forwarded_message = await replies_channel.fetch_message(int(forwarded_message_id))
                             await forwarded_message.delete()
                             logger.info(f"転送メッセージを削除しました: メッセージID={forwarded_message_id}")
-                        except (discord.NotFound, discord.Forbidden):
-                            logger.warning(f"転送メッセージの削除に失敗しました: {forwarded_message_id}")
+                        except discord.NotFound:
+                            logger.warning(f"転送メッセージが見つかりません: メッセージID={forwarded_message_id}")
+                        except discord.Forbidden:
+                            logger.warning(f"転送メッセージの削除権限がありません: メッセージID={forwarded_message_id}")
+                        except Exception as e:
+                            logger.error(f"転送メッセージ削除エラー: {e}")
+                            raise Exception(f"転送メッセージ削除エラー: {e}")
+                else:
+                    logger.warning(f"repliesチャンネルが見つかりません: channel_id={channel_id}")
+                    raise Exception("repliesチャンネルが見つかりません")
+            else:
+                logger.warning(f"メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
+                raise Exception("メッセージIDまたはチャンネルIDがありません")
             
             await interaction.followup.send(
                 f"✅ リプライを削除しました！\n\n"
