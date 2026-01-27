@@ -16,12 +16,12 @@ from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
 
-class UnreplyModal(ui.Modal, title="🗑️ リプライを削除"):
+class UnreplyModal(ui.Modal, title="� リプライを削除"):
     """リプライを削除するリプライIDを入力するモーダル"""
     
-    def __init__(self):
+    def __init__(self, file_manager: FileManager):
         super().__init__(timeout=300)
-        self.file_manager = FileManager()
+        self.file_manager = file_manager
         
         self.reply_id_input = ui.TextInput(
             label="💬 リプライID",
@@ -124,13 +124,14 @@ class Unreply(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.file_manager = FileManager()
         logger.info("Unreply cog が初期化されました")
     
     @app_commands.command(name='unreply', description='🗑️ リプライを削除する')
     async def unreply_command(self, interaction: Interaction) -> None:
         """リプライ削除コマンド"""
         try:
-            await interaction.response.send_modal(UnreplyModal())
+            await interaction.response.send_modal(UnreplyModal(self.file_manager))
         except Exception as e:
             logger.error(f"リプライ削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

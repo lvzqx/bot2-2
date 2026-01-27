@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
     """いいねする投稿IDを入力するモーダル"""
     
-    def __init__(self):
+    def __init__(self, file_manager: FileManager):
         super().__init__(timeout=300)
-        self.file_manager = FileManager()
+        self.file_manager = file_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -137,18 +137,19 @@ class Like(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.file_manager = FileManager()
         logger.info("Like cog が初期化されました")
     
     @app_commands.command(name='like', description='❤️ 投稿にいいねする')
     async def like_command(self, interaction: Interaction) -> None:
         """いいねコマンド"""
         try:
-            await interaction.response.send_modal(LikeModal())
+            await interaction.response.send_modal(LikeModal(self.file_manager))
         except Exception as e:
             logger.error(f"いいねモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(
                 "❌ **エラーが発生しました**\n\n"
-                "モーダルの表示中にエラーが発生しました。もう一度お試しください。",
+                "いいねモーダルの表示中にエラーが発生しました。もう一度お試しください。",
                 ephemeral=True
             )
 

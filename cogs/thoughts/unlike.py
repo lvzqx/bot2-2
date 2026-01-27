@@ -16,12 +16,12 @@ from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
 
-class UnlikeModal(ui.Modal, title="❌ いいねを削除"):
+class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
     """いいねを削除する投稿IDを入力するモーダル"""
     
-    def __init__(self):
+    def __init__(self, file_manager: FileManager):
         super().__init__(timeout=300)
-        self.file_manager = FileManager()
+        self.file_manager = file_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -133,13 +133,14 @@ class Unlike(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.file_manager = FileManager()
         logger.info("Unlike cog が初期化されました")
     
     @app_commands.command(name='unlike', description='❌ いいねを削除する')
     async def unlike_command(self, interaction: Interaction) -> None:
         """いいね削除コマンド"""
         try:
-            await interaction.response.send_modal(UnlikeModal())
+            await interaction.response.send_modal(UnlikeModal(self.file_manager))
         except Exception as e:
             logger.error(f"いいね削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

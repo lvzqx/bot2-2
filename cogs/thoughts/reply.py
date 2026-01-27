@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
     """リプライする投稿IDと内容を入力するモーダル"""
     
-    def __init__(self):
+    def __init__(self, file_manager: FileManager):
         super().__init__(timeout=300)
-        self.file_manager = FileManager()
+        self.file_manager = file_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -153,18 +153,19 @@ class Reply(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.file_manager = FileManager()
         logger.info("Reply cog が初期化されました")
     
     @app_commands.command(name='reply', description='💬 投稿にリプライする')
     async def reply_command(self, interaction: Interaction) -> None:
         """リプライコマンド"""
         try:
-            await interaction.response.send_modal(ReplyModal())
+            await interaction.response.send_modal(ReplyModal(self.file_manager))
         except Exception as e:
             logger.error(f"リプライモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(
                 "❌ **エラーが発生しました**\n\n"
-                "モーダルの表示中にエラーが発生しました。もう一度お試しください。",
+                "リプライモーダルの表示中にエラーが発生しました。もう一度お試しください。",
                 ephemeral=True
             )
 
