@@ -250,6 +250,7 @@ class SearchView(ui.View):
     def __init__(self, search_cog: Search):
         super().__init__(timeout=300)
         self.search_cog = search_cog
+        self.file_manager = search_cog.file_manager
         
         # 検索ボタン
         search_button = ui.Button(
@@ -336,30 +337,6 @@ class SearchView(ui.View):
                 "🎲 エラーが発生しました。もう一度お試しください。",
                 ephemeral=True
             )
-    
-    def _log_action(self, user_id: int, action_type: str, target_id: int, action_data: Dict[str, Any]) -> None:
-        """アクションをファイルに記録"""
-        try:
-            import json
-            action_record = {
-                "user_id": user_id,
-                "action_type": action_type,
-                "target_id": target_id,
-                "action_data": action_data,
-                "created_at": datetime.now().isoformat()
-            }
-            
-            # アクションファイルを作成
-            action_filename = os.path.join("data", f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-            os.makedirs("data", exist_ok=True)
-            
-            with open(action_filename, 'w', encoding='utf-8') as f:
-                json.dump(action_record, f, ensure_ascii=False, indent=2)
-            
-            logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
-            
-        except Exception as e:
-            logger.error(f"アクション記録中にエラーが発生しました: {e}", exc_info=True)
     
     def _create_post_embed(self, post: PostData, title: str) -> Embed:
         """投稿Embedを作成"""

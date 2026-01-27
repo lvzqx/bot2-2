@@ -208,7 +208,7 @@ class FileManager:
                           action_data: Dict[str, Any] = None) -> None:
         """アクション記録を保存"""
         # アクション専用フォルダーを作成
-        action_dir = os.path.join(self.base_dir, 'data', 'actions')
+        action_dir = os.path.join(self.base_dir, 'actions')
         os.makedirs(action_dir, exist_ok=True)
         
         action_record = {
