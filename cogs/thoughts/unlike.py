@@ -103,17 +103,28 @@ class UnlikeModal(ui.Modal, title="❌ いいねを削除"):
                         like_data = json.load(f)
                         message_id = like_data.get('message_id')
                         channel_id = like_data.get('channel_id')
+                        forwarded_message_id = like_data.get('forwarded_message_id')
                     
                     if message_id and channel_id:
                         # いいねチャンネルのメッセージを削除
                         likes_channel = interaction.guild.get_channel(int(channel_id))
                         if likes_channel:
+                            # いいねメッセージを削除
                             try:
                                 like_message = await likes_channel.fetch_message(int(message_id))
                                 await like_message.delete()
                                 logger.info(f"いいねメッセージを削除しました: メッセージID={message_id}")
                             except (discord.NotFound, discord.Forbidden):
                                 logger.warning(f"いいねメッセージの削除に失敗しました: {message_id}")
+                            
+                            # 転送メッセージも削除
+                            if forwarded_message_id:
+                                try:
+                                    forwarded_message = await likes_channel.fetch_message(int(forwarded_message_id))
+                                    await forwarded_message.delete()
+                                    logger.info(f"転送メッセージを削除しました: メッセージID={forwarded_message_id}")
+                                except (discord.NotFound, discord.Forbidden):
+                                    logger.warning(f"転送メッセージの削除に失敗しました: {forwarded_message_id}")
                 except (json.JSONDecodeError, FileNotFoundError):
                     pass
                 

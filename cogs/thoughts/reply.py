@@ -88,7 +88,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                                 original_message = await original_channel.fetch_message(int(message_id))
                                 
                                 # 元の投稿を転送
-                                await original_message.forward(replies_channel)
+                                forwarded_message = await original_message.forward(replies_channel)
                                 
                                 # リプライを投稿
                                 reply_embed = discord.Embed(
@@ -99,8 +99,8 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                                 reply_embed.set_footer(text=f"リプライID: {reply_id}")
                                 reply_message = await replies_channel.send(embed=reply_embed)
                                 
-                                # リプライファイルにメッセージIDを保存
-                                self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id))
+                                # リプライファイルに両方のメッセージIDを保存
+                                self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
                             else:
                                 # チャンネルが見つからない場合は従来通り
                                 reply_embed = discord.Embed(

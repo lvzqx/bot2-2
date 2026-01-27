@@ -168,7 +168,7 @@ class FileManager:
         
         return like_id
     
-    def update_like_message_id(self, like_id: int, message_id: str, channel_id: str) -> None:
+    def update_like_message_id(self, like_id: int, message_id: str, channel_id: str, forwarded_message_id: str = None) -> None:
         """いいねファイルにメッセージIDを更新"""
         # 全いいねファイルを検索
         for filename in os.listdir(self.likes_dir):
@@ -181,6 +181,8 @@ class FileManager:
                         # メッセージIDを追加・更新
                         like_data['message_id'] = message_id
                         like_data['channel_id'] = channel_id
+                        if forwarded_message_id:
+                            like_data['forwarded_message_id'] = forwarded_message_id
                         
                         # ファイルを更新
                         with open(os.path.join(self.likes_dir, filename), 'w', encoding='utf-8') as f:
@@ -189,7 +191,7 @@ class FileManager:
                 except (json.JSONDecodeError, FileNotFoundError):
                     continue
     
-    def update_reply_message_id(self, reply_id: int, message_id: str, channel_id: str) -> None:
+    def update_reply_message_id(self, reply_id: int, message_id: str, channel_id: str, forwarded_message_id: str = None) -> None:
         """リプライファイルにメッセージIDを更新"""
         # 全リプライファイルを検索
         for filename in os.listdir(self.replies_dir):
@@ -202,6 +204,8 @@ class FileManager:
                         # メッセージIDを追加・更新
                         reply_data['message_id'] = message_id
                         reply_data['channel_id'] = channel_id
+                        if forwarded_message_id:
+                            reply_data['forwarded_message_id'] = forwarded_message_id
                         
                         # ファイルを更新
                         with open(os.path.join(self.replies_dir, filename), 'w', encoding='utf-8') as f:
