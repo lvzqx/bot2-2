@@ -90,6 +90,214 @@ class FileManager:
         
         return posts
     
+    def update_post(self, post_id: int, content: str = None, category: str = None, 
+                   image_url: str = None) -> bool:
+        """投稿を更新"""
+        filename = os.path.join(self.posts_dir, f"{post_id}.json")
+        
+        if not os.path.exists(filename):
+            return False
+        
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                post_data = json.load(f)
+            
+            # 内容を更新
+            if content is not None:
+                post_data['content'] = content
+            if category is not None:
+                post_data['category'] = category
+            if image_url is not None:
+                post_data['image_url'] = image_url
+            
+            post_data['updated_at'] = datetime.now().isoformat()
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(post_data, f, ensure_ascii=False, indent=2)
+            
+            return True
+        except (json.JSONDecodeError, FileNotFoundError):
+            return False
+    
+    def get_like_by_user_and_post(self, post_id: int, user_id: str) -> Optional[Dict[str, Any]]:
+        """ユーザーといいねされた投稿IDからいいねデータを取得"""
+        for filename in os.listdir(self.likes_dir):
+            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.likes_dir, filename), 'r', encoding='utf-8') as f:
+                        like_data = json.load(f)
+                    
+                    if like_data.get('user_id') == user_id:
+                        return like_data
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        return None
+    
+    def delete_like(self, post_id: int, user_id: str) -> bool:
+        """いいねを削除"""
+        like_data = self.get_like_by_user_and_post(post_id, user_id)
+        if not like_data:
+            return False
+        
+        filename = os.path.join(self.likes_dir, f"{post_id}_{like_data['id']}.json")
+        try:
+            os.remove(filename)
+            return True
+        except FileNotFoundError:
+            return False
+    
+    def get_reply_by_id_and_user(self, reply_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """リプライIDとユーザーIDからリプライデータを取得"""
+        for filename in os.listdir(self.replies_dir):
+            if filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                    
+                    if (reply_data.get('id') == reply_id and 
+                        reply_data.get('user_id') == user_id):
+                        return reply_data
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        return None
+    
+    def delete_reply(self, reply_id: str, user_id: str) -> bool:
+        """リプライを削除"""
+        reply_data = self.get_reply_by_id_and_user(reply_id, user_id)
+        if not reply_data:
+            return False
+        
+        # ファイル名を特定して削除
+        for filename in os.listdir(self.replies_dir):
+            if filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    if (data.get('id') == reply_id and 
+                        data.get('user_id') == user_id):
+                        os.remove(os.path.join(self.replies_dir, filename))
+                        return True
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        return False
+    
+    def update_reply(self, post_id: int, reply_id: int, content: str) -> bool:
+        """リプライを更新"""
+        for filename in os.listdir(self.replies_dir):
+            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                    
+                    if reply_data.get('id') == reply_id:
+                        reply_data['content'] = content
+                        reply_data['updated_at'] = datetime.now().isoformat()
+                        
+                        with open(os.path.join(self.replies_dir, filename), 'w', encoding='utf-8') as f:
+                            json.dump(reply_data, f, ensure_ascii=False, indent=2)
+                        return True
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        return False
+    
+    def save_action_record(self, action_type: str, user_id: str, target_id: str, 
+                          action_data: Dict[str, Any] = None) -> None:
+        """アクション記録を保存"""
+        # アクション専用フォルダーを作成
+        action_dir = os.path.join(self.base_dir, 'data', 'actions')
+        os.makedirs(action_dir, exist_ok=True)
+        
+        action_record = {
+            'action_type': action_type,
+            'user_id': user_id,
+            'target_id': target_id,
+            'timestamp': datetime.now().isoformat(),
+            'data': action_data or {}
+        }
+        
+        action_filename = os.path.join(action_dir, f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+        
+        with open(action_filename, 'w', encoding='utf-8') as f:
+            json.dump(action_record, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"アクション記録完了: {action_type} by user {user_id} on target {target_id}")
+    
+    def save_message_ref(self, post_id: int, message_id: str, channel_id: str, user_id: str) -> None:
+        """メッセージ参照を保存"""
+        # メッセージ参照専用フォルダーを作成
+        message_ref_dir = os.path.join(self.base_dir, 'data', 'message_refs')
+        os.makedirs(message_ref_dir, exist_ok=True)
+        
+        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
+        
+        message_ref_data = {
+            'post_id': post_id,
+            'message_id': message_id,
+            'channel_id': channel_id,
+            'user_id': user_id,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        with open(message_ref_file, 'w', encoding='utf-8') as f:
+            json.dump(message_ref_data, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
+    
+    def get_message_ref(self, post_id: int) -> Optional[Dict[str, Any]]:
+        """メッセージ参照を取得"""
+        message_ref_dir = os.path.join(self.base_dir, 'data', 'message_refs')
+        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
+        
+        if not os.path.exists(message_ref_file):
+            return None
+        
+        try:
+            with open(message_ref_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return None
+    
+    def delete_message_ref(self, post_id: int) -> bool:
+        """メッセージ参照を削除"""
+        message_ref_dir = os.path.join(self.base_dir, 'data', 'message_refs')
+        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
+        
+        try:
+            os.remove(message_ref_file)
+            return True
+        except FileNotFoundError:
+            return False
+    
+    def get_replies_by_post_id(self, post_id: int) -> List[Dict[str, Any]]:
+        """投稿IDから全リプライを取得"""
+        replies = []
+        
+        for filename in os.listdir(self.replies_dir):
+            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+                try:
+                    with open(os.path.join(self.replies_dir, filename), 'r', encoding='utf-8') as f:
+                        reply_data = json.load(f)
+                        replies.append(reply_data)
+                except (json.JSONDecodeError, FileNotFoundError):
+                    continue
+        
+        return replies
+    
+    def delete_replies_by_post_id(self, post_id: int) -> int:
+        """投稿IDから全リプライを削除"""
+        deleted_count = 0
+        
+        for filename in os.listdir(self.replies_dir):
+            if filename.startswith(f'{post_id}_') and filename.endswith('.json'):
+                try:
+                    os.remove(os.path.join(self.replies_dir, filename))
+                    deleted_count += 1
+                except FileNotFoundError:
+                    continue
+        
+        return deleted_count
+    
     def search_posts(self, keyword: str = None, category: str = None, 
                      user_id: str = None) -> List[Dict[str, Any]]:
         """投稿を検索"""

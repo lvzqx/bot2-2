@@ -296,7 +296,7 @@ class SearchView(ui.View):
             await interaction.response.defer(ephemeral=True)
             
             # ランダムな投稿を取得
-            posts = self.search_cog._search_posts(limit=1, current_user_id=int(interaction.user.id))
+            posts = self.search_cog._search_posts(current_user_id=int(interaction.user.id))
             logger.info(f"検索結果: {len(posts)}件")
             
             if not posts:
@@ -306,8 +306,10 @@ class SearchView(ui.View):
                 )
                 return
             
-            post = posts[0]
-            logger.info(f"選択された投稿: ID={post['id']}")
+            # ランダムに1件選択
+            import random
+            post = random.choice(posts)
+            logger.info(f"ランダム選択された投稿: ID={post['id']}")
             
             # アクションを記録
             self._log_action(interaction.user.id, 'lucky', post['id'], {
