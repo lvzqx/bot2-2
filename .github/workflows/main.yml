@@ -185,8 +185,8 @@ jobs:
             echo $! > temp/bot.pid
             sleep 10
           fi
-          # 1分ごとにチェック
-          sleep 60
+          # 30秒ごとにチェック（即時対応）
+          sleep 30
         done
     
     - name: Skip automatic backup
