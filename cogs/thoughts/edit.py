@@ -169,11 +169,9 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             # file_managerを使って投稿を更新
             success = self.cog.file_manager.update_post(
                 post_id=self.post_data['id'],
-                user_id=str(interaction.user.id),
                 content=new_content,
                 category=new_category,
-                image_url=new_image_url,
-                is_private=not is_public  # 公開設定を更新
+                image_url=new_image_url
             )
             
             if not success:
