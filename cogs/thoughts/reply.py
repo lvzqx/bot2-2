@@ -68,7 +68,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             )
             
             # リプライ用チャンネルに投稿
-            replies_channel_id = get_channel_id('replies')
+            replies_channel_id = extract_channel_id(get_channel_id('replies'))
             replies_channel = interaction.guild.get_channel(replies_channel_id)
             
             if replies_channel:

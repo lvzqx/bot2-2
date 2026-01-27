@@ -59,7 +59,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             )
             
             # いいねチャンネルに転送
-            likes_channel_id = get_channel_id('likes')
+            likes_channel_id = extract_channel_id(get_channel_id('likes'))
             likes_channel = interaction.guild.get_channel(likes_channel_id)
             
             if likes_channel:
