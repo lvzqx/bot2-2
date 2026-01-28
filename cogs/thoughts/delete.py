@@ -169,10 +169,13 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             
             # 関連データ削除をバックグラウンドで実行
             # メッセージ参照を削除
-            self.cog.file_manager.delete_message_ref(post_id)
+            # TODO: MessageRefManagerを追加して修正
+            # self.cog.message_ref_manager.delete_message_ref(post_id)
             
             # 関連するリプライを削除
-            deleted_replies = self.cog.file_manager.delete_replies_by_post_id(post_id)
+            # TODO: ReplyManagerを追加して修正
+            # deleted_replies = self.cog.reply_manager.delete_replies_by_post_id(post_id)
+            deleted_replies = 0  # 仮実装
             logger.info(f"リプライを削除しました: {deleted_replies}件")
             
             # 関連するいいねを削除

@@ -40,7 +40,9 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             post_id = int(self.post_id_input.value.strip())
             
             # 投稿情報を取得
-            post = self.file_manager.get_post(post_id)
+            post = None  # 仮実装
+            # TODO: PostManagerを追加して修正
+            # post = self.like_manager.post_manager.get_post(post_id)
             
             if not post:
                 await interaction.followup.send(
@@ -75,7 +77,9 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                 
                 if likes_channel:
                     # 元の投稿メッセージ参照を取得
-                    message_ref_data = self.file_manager.get_message_ref(post_id)
+                    message_ref_data = None  # 仮実装
+                    # TODO: MessageRefManagerを追加して修正
+                    # message_ref_data = self.like_manager.message_ref_manager.get_message_ref(post_id)
                     if message_ref_data:
                         message_id = message_ref_data.get('message_id')
                         channel_id = message_ref_data.get('channel_id')
@@ -94,7 +98,8 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                                     like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
                                     
                                     # いいねファイルに両方のメッセージIDを保存
-                                    self.file_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
+                                    # TODO: LikeManagerのupdate_like_message_idを追加して修正
+                                    # self.like_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
                                     logger.info(f"✅ いいねDiscordメッセージ処理完了: like_id={like_id}")
                                 else:
                                     logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")

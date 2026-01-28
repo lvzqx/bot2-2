@@ -50,7 +50,9 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             reply_content = self.reply_input.value.strip()
             
             # 親投稿の存在確認
-            parent_post = self.file_manager.get_post(post_id)
+            parent_post = None  # 仮実装
+            # TODO: PostManagerを追加して修正
+            # parent_post = self.reply_manager.post_manager.get_post(post_id)
             
             if not parent_post:
                 await interaction.followup.send(
@@ -84,7 +86,9 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 
                 if replies_channel:
                     # 元の投稿メッセージ参照を取得
-                    message_ref_data = self.file_manager.get_message_ref(post_id)
+                    message_ref_data = None  # 仮実装
+                    # TODO: MessageRefManagerを追加して修正
+                    # message_ref_data = self.reply_manager.message_ref_manager.get_message_ref(post_id)
                     if message_ref_data:
                         message_id = message_ref_data.get('message_id')
                         channel_id = message_ref_data.get('channel_id')
@@ -110,7 +114,8 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                                     reply_message = await replies_channel.send(embed=reply_embed)
                                     
                                     # リプライファイルに両方のメッセージIDを保存
-                                    self.file_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
+                                    # TODO: ReplyManagerのupdate_reply_message_idを追加して修正
+                                    # self.reply_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
                                     logger.info(f"✅ リプライDiscordメッセージ処理完了: reply_id={reply_id}")
                                 else:
                                     logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")

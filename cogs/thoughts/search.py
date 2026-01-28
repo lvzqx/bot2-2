@@ -256,7 +256,6 @@ class SearchView(ui.View):
     def __init__(self, search_cog: Search):
         super().__init__(timeout=None)
         self.search_cog = search_cog
-        self.file_manager = search_cog.file_manager
         
         # 検索ボタン
         search_button = ui.Button(
@@ -319,7 +318,7 @@ class SearchView(ui.View):
             logger.info(f"ランダム選択された投稿: ID={post['id']}")
             
             # アクションを記録
-            self.file_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
+            self.search_cog.action_manager.save_action_record('lucky', str(interaction.user.id), str(post['id']), {
                 'post_content': post['content'][:100],
                 'category': post['category']
             })
@@ -570,7 +569,7 @@ class PaginationView(ui.View):
             await interaction.response.defer(ephemeral=True)
             
             # 投稿情報を取得
-            post = self.search_cog.file_manager.get_post(post_id)
+            post = self.search_cog.post_manager.get_post(post_id)
             
             if not post:
                 await interaction.followup.send(
