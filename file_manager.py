@@ -17,11 +17,15 @@ class FileManager:
         self.posts_dir = os.path.join(base_dir, "posts")
         self.replies_dir = os.path.join(base_dir, "replies")
         self.likes_dir = os.path.join(base_dir, "likes")
+        self.actions_dir = os.path.join(base_dir, "actions")
+        self.message_refs_dir = os.path.join(base_dir, "message_refs")
         
         # ディレクトリがなければ作成
         os.makedirs(self.posts_dir, exist_ok=True)
         os.makedirs(self.replies_dir, exist_ok=True)
         os.makedirs(self.likes_dir, exist_ok=True)
+        os.makedirs(self.actions_dir, exist_ok=True)
+        os.makedirs(self.message_refs_dir, exist_ok=True)
     
     def get_next_post_id(self) -> int:
         """次の投稿IDを取得"""
@@ -209,9 +213,7 @@ class FileManager:
     def save_action_record(self, action_type: str, user_id: str, target_id: str, 
                           action_data: Dict[str, Any] = None) -> None:
         """アクション記録を保存"""
-        # アクション専用フォルダーを作成
-        action_dir = os.path.join(self.base_dir, 'actions')
-        os.makedirs(action_dir, exist_ok=True)
+        # アクション専用フォルダーは__init__で作成済み
         
         action_record = {
             'action_type': action_type,
@@ -221,7 +223,7 @@ class FileManager:
             'data': action_data or {}
         }
         
-        action_filename = os.path.join(action_dir, f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+        action_filename = os.path.join(self.actions_dir, f"action_{action_type}_{user_id}_{target_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
         
         with open(action_filename, 'w', encoding='utf-8') as f:
             json.dump(action_record, f, ensure_ascii=False, indent=2)
@@ -230,8 +232,7 @@ class FileManager:
     
     def save_message_ref(self, post_id: int, message_id: str, channel_id: str, user_id: str) -> None:
         """メッセージ参照を保存"""
-        message_ref_dir = os.path.join(self.base_dir, 'message_refs')
-        os.makedirs(message_ref_dir, exist_ok=True)
+        # メッセージ参照フォルダーは__init__で作成済み
         
         message_ref_data = {
             "post_id": post_id,
@@ -241,7 +242,7 @@ class FileManager:
             "created_at": datetime.now().isoformat()
         }
         
-        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
+        message_ref_file = os.path.join(self.message_refs_dir, f'message_ref_{post_id}.json')
         
         with open(message_ref_file, 'w', encoding='utf-8') as f:
             json.dump(message_ref_data, f, ensure_ascii=False, indent=2)
@@ -250,8 +251,7 @@ class FileManager:
     
     def get_message_ref(self, post_id: int) -> Optional[Dict[str, Any]]:
         """メッセージ参照を取得"""
-        message_ref_dir = os.path.join(self.base_dir, 'message_refs')
-        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
+        message_ref_file = os.path.join(self.message_refs_dir, f'message_ref_{post_id}.json')
         
         if not os.path.exists(message_ref_file):
             return None
@@ -264,8 +264,7 @@ class FileManager:
     
     def delete_message_ref(self, post_id: int) -> bool:
         """メッセージ参照を削除"""
-        message_ref_dir = os.path.join(self.base_dir, 'data', 'message_refs')
-        message_ref_file = os.path.join(message_ref_dir, f'message_ref_{post_id}.json')
+        message_ref_file = os.path.join(self.message_refs_dir, f'message_ref_{post_id}.json')
         
         try:
             os.remove(message_ref_file)
