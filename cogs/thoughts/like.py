@@ -12,6 +12,8 @@ from discord.ext import commands
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.like_manager import LikeManager
+from managers.post_manager import PostManager
+from managers.message_ref_manager import MessageRefManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +21,11 @@ logger = logging.getLogger(__name__)
 class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
     """いいねする投稿IDを入力するモーダル"""
     
-    def __init__(self, like_manager: LikeManager):
+    def __init__(self, like_manager: LikeManager, post_manager: PostManager, message_ref_manager: MessageRefManager):
         super().__init__(timeout=None)
         self.like_manager = like_manager
+        self.post_manager = post_manager
+        self.message_ref_manager = message_ref_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -40,9 +44,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
             post_id = int(self.post_id_input.value.strip())
             
             # 投稿情報を取得
-            post = None  # 仮実装
-            # TODO: PostManagerを追加して修正
-            # post = self.like_manager.post_manager.get_post(post_id)
+            post = self.post_manager.get_post(post_id)
             
             if not post:
                 await interaction.followup.send(
@@ -77,9 +79,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                 
                 if likes_channel:
                     # 元の投稿メッセージ参照を取得
-                    message_ref_data = None  # 仮実装
-                    # TODO: MessageRefManagerを追加して修正
-                    # message_ref_data = self.like_manager.message_ref_manager.get_message_ref(post_id)
+                    message_ref_data = self.message_ref_manager.get_message_ref(post_id)
                     if message_ref_data:
                         message_id = message_ref_data.get('message_id')
                         channel_id = message_ref_data.get('channel_id')
@@ -98,7 +98,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                                     like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
                                     
                                     # いいねファイルに両方のメッセージIDを保存
-                                    # TODO: LikeManagerのupdate_like_message_idを追加して修正
+                                    # TODO: LikeManagerのupdate_like_message_idメソッドを追加
                                     # self.like_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
                                     logger.info(f"✅ いいねDiscordメッセージ処理完了: like_id={like_id}")
                                 else:
@@ -141,13 +141,15 @@ class Like(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.like_manager = LikeManager()
+        self.post_manager = PostManager()
+        self.message_ref_manager = MessageRefManager()
         logger.info("Like cog が初期化されました")
     
     @app_commands.command(name='like', description='❤️ 投稿にいいねする')
     async def like_command(self, interaction: Interaction) -> None:
         """いいねコマンド"""
         try:
-            await interaction.response.send_modal(LikeModal(self.like_manager))
+            await interaction.response.send_modal(LikeModal(self.like_manager, self.post_manager, self.message_ref_manager))
         except Exception as e:
             logger.error(f"いいねモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

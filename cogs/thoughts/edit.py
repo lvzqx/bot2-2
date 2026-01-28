@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.post_manager import PostManager
 from managers.reply_manager import ReplyManager
+from managers.message_ref_manager import MessageRefManager
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class Edit(commands.Cog):
         self.bot = bot
         self.post_manager = PostManager()
         self.reply_manager = ReplyManager()
+        self.message_ref_manager = MessageRefManager()
     
     @app_commands.command(name='edit', description='📝 投稿を編集')
     async def edit(self, interaction: discord.Interaction):
@@ -40,9 +42,7 @@ class Edit(commands.Cog):
             items_list = []
             for post in posts[:25]:  # 最大25件
                 # メッセージ参照を取得
-                message_ref_data = None  # 仮実装
-                # TODO: MessageRefManagerを追加して修正
-                # message_ref_data = self.message_ref_manager.get_message_ref(post['id'])
+                message_ref_data = self.message_ref_manager.get_message_ref(post['id'])
                 if message_ref_data:
                     message_id = message_ref_data.get('message_id')
                     channel_id = message_ref_data.get('channel_id')

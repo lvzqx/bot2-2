@@ -12,6 +12,7 @@ from discord.ext import commands
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.like_manager import LikeManager
+from managers.post_manager import PostManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +20,10 @@ logger = logging.getLogger(__name__)
 class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
     """いいねを削除する投稿IDを入力するモーダル"""
     
-    def __init__(self, like_manager: LikeManager):
+    def __init__(self, like_manager: LikeManager, post_manager: PostManager):
         super().__init__(timeout=None)
         self.like_manager = like_manager
+        self.post_manager = post_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -42,9 +44,7 @@ class UnlikeModal(ui.Modal, title="🚫 いいねを削除"):
             user_id = str(interaction.user.id)
             
             # 投稿の存在確認
-            # PostManagerが必要なので、とりあえずこのままにしておく
-            # TODO: PostManagerを追加して修正
-            post = None  # 仮実装
+            post = self.post_manager.get_post(post_id)
             if not post:
                 await interaction.followup.send(
                     "❌ **投稿が見つかりません**\n\n"
@@ -160,13 +160,14 @@ class Unlike(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.like_manager = LikeManager()
+        self.post_manager = PostManager()
         logger.info("Unlike cog が初期化されました")
     
     @app_commands.command(name='unlike', description='❌ いいねを削除する')
     async def unlike_command(self, interaction: Interaction) -> None:
         """いいね削除コマンド"""
         try:
-            await interaction.response.send_modal(UnlikeModal(self.like_manager))
+            await interaction.response.send_modal(UnlikeModal(self.like_manager, self.post_manager))
         except Exception as e:
             logger.error(f"いいね削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

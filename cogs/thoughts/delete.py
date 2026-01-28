@@ -10,6 +10,8 @@ from discord.ext import commands
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.post_manager import PostManager
+from managers.message_ref_manager import MessageRefManager
+from managers.reply_manager import ReplyManager
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,8 @@ class Delete(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.post_manager = PostManager()
+        self.message_ref_manager = MessageRefManager()
+        self.reply_manager = ReplyManager()
     
     @app_commands.command(name="delete", description="🗑️ 投稿を削除")
     async def delete_post(self, interaction: Interaction) -> None:
@@ -169,11 +173,10 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             
             # 関連データ削除をバックグラウンドで実行
             # メッセージ参照を削除
-            # TODO: MessageRefManagerを追加して修正
-            # self.cog.message_ref_manager.delete_message_ref(post_id)
+            self.cog.message_ref_manager.delete_message_ref(post_id)
             
             # 関連するリプライを削除
-            # TODO: ReplyManagerを追加して修正
+            # TODO: ReplyManagerのdelete_replies_by_post_idメソッドを追加
             # deleted_replies = self.cog.reply_manager.delete_replies_by_post_id(post_id)
             deleted_replies = 0  # 仮実装
             logger.info(f"リプライを削除しました: {deleted_replies}件")

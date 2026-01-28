@@ -12,6 +12,8 @@ from discord.ext import commands
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.reply_manager import ReplyManager
+from managers.post_manager import PostManager
+from managers.message_ref_manager import MessageRefManager
 from config import get_channel_id, extract_channel_id
 
 logger = logging.getLogger(__name__)
@@ -19,9 +21,11 @@ logger = logging.getLogger(__name__)
 class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
     """リプライする投稿IDと内容を入力するモーダル"""
     
-    def __init__(self, reply_manager: ReplyManager):
+    def __init__(self, reply_manager: ReplyManager, post_manager: PostManager, message_ref_manager: MessageRefManager):
         super().__init__(timeout=None)
         self.reply_manager = reply_manager
+        self.post_manager = post_manager
+        self.message_ref_manager = message_ref_manager
         
         self.post_id_input = ui.TextInput(
             label="📝 投稿ID",
@@ -50,9 +54,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             reply_content = self.reply_input.value.strip()
             
             # 親投稿の存在確認
-            parent_post = None  # 仮実装
-            # TODO: PostManagerを追加して修正
-            # parent_post = self.reply_manager.post_manager.get_post(post_id)
+            parent_post = self.post_manager.get_post(post_id)
             
             if not parent_post:
                 await interaction.followup.send(
@@ -86,9 +88,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                 
                 if replies_channel:
                     # 元の投稿メッセージ参照を取得
-                    message_ref_data = None  # 仮実装
-                    # TODO: MessageRefManagerを追加して修正
-                    # message_ref_data = self.reply_manager.message_ref_manager.get_message_ref(post_id)
+                    message_ref_data = self.message_ref_manager.get_message_ref(post_id)
                     if message_ref_data:
                         message_id = message_ref_data.get('message_id')
                         channel_id = message_ref_data.get('channel_id')
@@ -114,7 +114,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                                     reply_message = await replies_channel.send(embed=reply_embed)
                                     
                                     # リプライファイルに両方のメッセージIDを保存
-                                    # TODO: ReplyManagerのupdate_reply_message_idを追加して修正
+                                    # TODO: ReplyManagerのupdate_reply_message_idメソッドを追加
                                     # self.reply_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
                                     logger.info(f"✅ リプライDiscordメッセージ処理完了: reply_id={reply_id}")
                                 else:
@@ -157,13 +157,15 @@ class Reply(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.reply_manager = ReplyManager()
+        self.post_manager = PostManager()
+        self.message_ref_manager = MessageRefManager()
         logger.info("Reply cog が初期化されました")
     
     @app_commands.command(name='reply', description='💬 投稿にリプライする')
     async def reply_command(self, interaction: Interaction) -> None:
         """リプライコマンド"""
         try:
-            await interaction.response.send_modal(ReplyModal(self.reply_manager))
+            await interaction.response.send_modal(ReplyModal(self.reply_manager, self.post_manager, self.message_ref_manager))
         except Exception as e:
             logger.error(f"リプライモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(

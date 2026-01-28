@@ -10,6 +10,7 @@ from discord.ext import commands
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.reply_manager import ReplyManager
+from managers.post_manager import PostManager
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class EditReply(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.reply_manager = ReplyManager()
+        self.post_manager = PostManager()
     
     @app_commands.command(name='edit_reply', description='💬 リプライを編集')
     async def edit_reply(self, interaction: discord.Interaction):
@@ -27,9 +29,7 @@ class EditReply(commands.Cog):
             await interaction.response.defer(ephemeral=True)
             
             # 全投稿を取得してユーザーのリプライを検索
-            # PostManagerが必要なので、とりあえずこのままにしておく
-            # TODO: PostManagerを追加して修正
-            all_posts = []  # 仮実装
+            all_posts = self.post_manager.get_all_posts()
             user_replies = []
             
             for post in all_posts:
