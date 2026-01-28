@@ -4,6 +4,9 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
+# データ保存を制御する環境変数
+SAVE_DATA = os.getenv('SAVE_DATA', 'true').lower() == 'true'
+
 logger = logging.getLogger(__name__)
 
 class FileManager:
@@ -317,14 +320,32 @@ class FileManager:
         
         return posts
     
+    def get_next_reply_id(self) -> int:
+        """次のリプライIDを取得（postと同じ仕組み）"""
+        existing_replies = [f for f in os.listdir(self.replies_dir) if f.endswith('.json')]
+        if not existing_replies:
+            return 1
+        
+        max_id = 0
+        for filename in existing_replies:
+            try:
+                # ファイル名からIDを抽出（例: reply_123.json）
+                reply_id = int(filename.replace('.json', '').replace('reply_', ''))
+                max_id = max(max_id, reply_id)
+            except ValueError:
+                continue
+        
+        return max_id + 1
+    
     def save_reply(self, post_id: int, user_id: str, content: str, 
                    display_name: str) -> int:
         """リプライを保存"""
-        # リプライIDを取得
-        existing_replies = [f for f in os.listdir(self.replies_dir) 
-                           if f.startswith(f"{post_id}_") and f.endswith('.json')]
+        if not SAVE_DATA:
+            # データ保存を無効化 - ダミーIDを返す
+            return 1
         
-        reply_id = len(existing_replies) + 1
+        # グローバルIDを取得（postと同じ仕組み）
+        reply_id = self.get_next_reply_id()
         
         reply_data = {
             "id": reply_id,
@@ -335,10 +356,12 @@ class FileManager:
             "created_at": datetime.now().isoformat()
         }
         
-        filename = os.path.join(self.replies_dir, f"{post_id}_{reply_id}.json")
+        # グローバルIDでファイル名を生成（postと同じ仕組み）
+        filename = os.path.join(self.replies_dir, f"reply_{reply_id}.json")
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(reply_data, f, ensure_ascii=False, indent=2)
         
+        logger.info(f"リプライを保存しました: reply_id={reply_id}, post_id={post_id}, user_id={user_id}")
         return reply_id
     
     def get_replies(self, post_id: int) -> List[Dict[str, Any]]:
@@ -356,13 +379,31 @@ class FileManager:
         
         return replies
     
+    def get_next_like_id(self) -> int:
+        """次のいいねIDを取得（postと同じ仕組み）"""
+        existing_likes = [f for f in os.listdir(self.likes_dir) if f.endswith('.json')]
+        if not existing_likes:
+            return 1
+        
+        max_id = 0
+        for filename in existing_likes:
+            try:
+                # ファイル名からIDを抽出（例: like_123.json）
+                like_id = int(filename.replace('.json', '').replace('like_', ''))
+                max_id = max(max_id, like_id)
+            except ValueError:
+                continue
+        
+        return max_id + 1
+    
     def save_like(self, post_id: int, user_id: str, display_name: str) -> int:
         """いいねを保存"""
-        # いいねIDを取得
-        existing_likes = [f for f in os.listdir(self.likes_dir) 
-                        if f.startswith(f"{post_id}_") and f.endswith('.json')]
+        if not SAVE_DATA:
+            # データ保存を無効化 - ダミーIDを返す
+            return 1
         
-        like_id = len(existing_likes) + 1
+        # グローバルIDを取得（postと同じ仕組み）
+        like_id = self.get_next_like_id()
         
         like_data = {
             "id": like_id,
@@ -372,10 +413,12 @@ class FileManager:
             "created_at": datetime.now().isoformat()
         }
         
-        filename = os.path.join(self.likes_dir, f"{post_id}_{like_id}.json")
+        # グローバルIDでファイル名を生成（postと同じ仕組み）
+        filename = os.path.join(self.likes_dir, f"like_{like_id}.json")
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(like_data, f, ensure_ascii=False, indent=2)
         
+        logger.info(f"いいねを保存しました: like_id={like_id}, post_id={post_id}, user_id={user_id}")
         return like_id
     
     def update_like_message_id(self, like_id: int, message_id: str, channel_id: str, forwarded_message_id: str = None) -> None:
