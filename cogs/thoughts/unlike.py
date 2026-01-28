@@ -9,8 +9,6 @@ from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
 # マネージャーをインポート
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.like_manager import LikeManager
 from managers.post_manager import PostManager
 from config import get_channel_id, extract_channel_id
