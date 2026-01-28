@@ -160,6 +160,14 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             
             logger.info(f"投稿を削除しました: 投稿ID={post_id}")
             
+            # まず成功メッセージを送信（速度改善）
+            await interaction.followup.send(
+                f"✅ **投稿を削除しました**\n\n"
+                f"投稿ID: {post_id} と関連データを削除しました。",
+                ephemeral=True
+            )
+            
+            # 関連データ削除をバックグラウンドで実行
             # メッセージ参照を削除
             self.cog.file_manager.delete_message_ref(post_id)
             
@@ -176,12 +184,6 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                         like_file = os.path.join(likes_dir, filename)
                         os.remove(like_file)
                         logger.info(f"いいねを削除しました: {filename}")
-            
-            await interaction.followup.send(
-                f"✅ **投稿を削除しました**\n\n"
-                f"投稿ID: {post_id} と関連データを削除しました。",
-                ephemeral=True
-            )
             
             # GitHubに保存する処理
             from .github_sync import sync_to_github

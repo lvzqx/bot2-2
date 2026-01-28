@@ -769,10 +769,15 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
                 display_name=interaction.user.display_name
             )
             
-            # GitHubに保存する処理
-            from .github_sync import sync_to_github
-            await sync_to_github("feeling lucky reply", interaction.user.name, self.post['id'])
+            # まず成功メッセージを送信（速度改善）
+            await interaction.followup.send(
+                f"💬 **リプライを投稿しました！**\n\n"
+                f"投稿ID: {self.post['id']} に返信しました。\n"
+                f"📢 「リプライ」チャンネルに投稿されました！",
+                ephemeral=True
+            )
             
+            # Discordメッセージ処理をバックグラウンドで実行
             # チャンネル転送
             replies_channel_url = get_channel_id('replies')
             replies_channel_id = extract_channel_id(replies_channel_url)
@@ -790,20 +795,13 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
                 embed.set_footer(text=f"投稿ID: {self.post['id']}")
                 
                 await replies_channel.send(embed=embed)
-                
-                await interaction.followup.send(
-                    f"💬 **リプライを投稿しました！**\n\n"
-                    f"投稿ID: {self.post['id']} に返信しました。\n"
-                    f"📢 「リプライ」チャンネルに投稿されました！",
-                    ephemeral=True
-                )
+                logger.info(f"✅ 検索リプライDiscordメッセージ処理完了: 投稿ID={self.post['id']}")
             else:
-                await interaction.followup.send(
-                    f"💬 **リプライを投稿しました！**\n\n"
-                    f"投稿ID: {self.post['id']} に返信しました。\n"
-                    f"※「リプライ」チャンネルが見つかりません",
-                    ephemeral=True
-                )
+                logger.warning(f"repliesチャンネルが見つかりません: replies_channel_id={replies_channel_id}")
+            
+            # GitHubに保存する処理
+            from .github_sync import sync_to_github
+            await sync_to_github("feeling lucky reply", interaction.user.name, self.post['id'])
             
         except Exception as e:
             logger.error(f"リプライ投稿中にエラーが発生しました: {e}")
