@@ -169,12 +169,6 @@ jobs:
         nohup python bot.py > logs/bot.log 2>&1 &
         echo $! > temp/bot.pid
         
-        # 起動を待つ
-        sleep 10
-        
-        # ログを表示
-        cat logs/bot.log
-        
         # プロセスが実行中か確認
         if ! ps -p $(cat temp/bot.pid) > /dev/null; then
           echo "ボットの起動に失敗しました"
