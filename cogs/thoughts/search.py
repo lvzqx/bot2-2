@@ -174,8 +174,6 @@ class Search(commands.Cog):
         
         # 投稿内容
         content = post['content']
-        if len(content) > 500:
-            content = content[:500] + "..."
         embed.description = content
         
         # 投稿ID
