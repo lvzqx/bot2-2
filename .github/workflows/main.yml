@@ -205,77 +205,13 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # データの変更をチェック
+        # データ同期を無効化（安定性のため）
+        echo "ℹ️ データ同期を無効化しました（ボットの安定性のため）"
         DATA_CHANGED=false
         
-        # データディレクトリに変更があるか確認
-        if [ -d "data" ]; then
-          # 最新のタイムスタンプを取得
-          LATEST_TIMESTAMP=$(find data -name "*.json" -exec stat -c %Y%m%d%H%M.%S {} + | sort -r | head -n 1 | cut -d' ' -f6 2>/dev/null)
-          TIMESTAMP_FILE="data/.last_sync"
-          
-          # タイムスタンプファイルが存在するか確認
-          if [ -f "$TIMESTAMP_FILE" ]; then
-            SAVED_TIMESTAMP=$(cat "$TIMESTAMP_FILE" 2>/dev/null)
-            if [ "$LATEST_TIMESTAMP" != "$SAVED_TIMESTAMP" ]; then
-              DATA_CHANGED=true
-              echo "📝 データに変更があります"
-            fi
-          else
-            DATA_CHANGED=true
-            echo "📝 データに変更があります（タイムスタンプファイルなし）"
-          fi
-          
-          # タイムスタンプファイルを更新
-          echo "$(date '+%Y%m%d%H%M.%S')" > "$TIMESTAMP_FILE"
-        else
-          # データディレクトリがない場合は変更なし
-          DATA_CHANGED=false
-          echo "データディレクトリがありません"
-        fi
-        
-        # データが変更されている場合のみコミット
-        if [ "$DATA_CHANGED" = true ]; then
-          echo "📝 データをGitHubに保存します..."
-          git add data/
-          
-          # コミットをリトライ（最大3回に減らして整理）
-          for i in {1..3}; do
-            if git commit -m "🔄 Auto-sync data - $(date '+%Y-%m-%d %H:%M:%S')"; then
-              echo "✅ データをコミットしました (試行 $i)"
-              break
-            else
-              echo "⚠️ コミット失敗、リトライします (試行 $i/3)"
-              git pull origin main || true
-              sleep 3
-              # 最終手段：1つのクリーンなコミットにまとめる
-              if [ $i -eq 3 ]; then
-                echo "🔥 最終手段：クリーンなコミットを実行します"
-                git add -A
-                git commit -m "🔄 Data sync - $(date '+%Y-%m-%d %H:%M:%S')" || true
-              fi
-            fi
-          done
-          
-          # プッシュをリトライ（最大3回に減らす）
-          for i in {1..3}; do
-            if git push origin main; then
-              echo "✅ データをプッシュしました (試行 $i)"
-              break
-            else
-              echo "⚠️ プッシュ失敗、リトライします (試行 $i/3)"
-              git pull origin main || true
-              sleep 3
-              # 最終手段：1回のみの強制プッシュ
-              if [ $i -eq 3 ]; then
-                echo "🔥 最終手段：強制プッシュを実行します"
-                git push origin main --force || true
-              fi
-            fi
-          done
-        else
-          echo "ℹ️ データに変更はありません"
-        fi
+        # データ同期を無効化（安定性のため）
+        echo "ℹ️ データ同期を無効化しました（ボットの安定性のため）"
+        echo "✅ ボットのデータ保存機能は安定して動作します"
     
     - name: Show logs
       if: always()
