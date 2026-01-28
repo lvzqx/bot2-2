@@ -41,8 +41,8 @@ jobs:
     
     - name: Setup data directory
       run: |
-        mkdir -p logs temp data/posts data/replies data/likes data/actions
-        chmod 755 logs temp data data/posts data/replies data/likes data/actions
+        mkdir -p logs temp data/posts data/replies data/likes data/actions data/message_refs
+        chmod 755 logs temp data data/posts data/replies data/likes data/actions data/message_refs
     
     - name: Preserve existing data
       run: |
@@ -58,6 +58,7 @@ jobs:
           echo "リプライ数: $(find data/replies -name "*.json" | wc -l)"
           echo "いいね数: $(find data/likes -name "*.json" | wc -l)"
           echo "アクション数: $(find data/actions -name "*.json" | wc -l)"
+          echo "メッセージ参照数: $(find data/message_refs -name "*.json" | wc -l)"
         else
           echo "⚠️ dataディレクトリが見つかりません"
           echo "🔄 GitHubから取得を試みます..."
@@ -69,7 +70,7 @@ jobs:
           else
             echo "⚠️ GitHubにもdataディレクトリがありません"
             echo "📝 新規に空のデータディレクトリを作成します"
-            mkdir -p data/posts data/replies data/likes data/actions
+            mkdir -p data/posts data/replies data/likes data/actions data/message_refs
           fi
         fi
     
@@ -86,10 +87,12 @@ jobs:
             REPLY_COUNT=$(find data/replies -name "*.json" | wc -l)
             LIKE_COUNT=$(find data/likes -name "*.json" | wc -l)
             ACTION_COUNT=$(find data/actions -name "*.json" | wc -l)
+            MESSAGE_REF_COUNT=$(find data/message_refs -name "*.json" | wc -l)
             echo "📊 データの投稿数: $POST_COUNT"
             echo "📊 データのリプライ数: $REPLY_COUNT"
             echo "📊 データのいいね数: $LIKE_COUNT"
             echo "📊 データのアクション数: $ACTION_COUNT"
+            echo "📊 データのメッセージ参照数: $MESSAGE_REF_COUNT"
             
             if [ "$POST_COUNT" -gt 0 ]; then
               echo "✅ データにデータが存在します。既存データを保護します。"
@@ -106,7 +109,7 @@ jobs:
             else
               echo "⚠️ GitHubにもデータディレクトリがありません"
               echo "📝 新規に空のデータディレクトリを作成します"
-              mkdir -p data/posts data/replies data/likes data/actions
+              mkdir -p data/posts data/replies data/likes data/actions data/message_refs
             fi
           fi
           
@@ -117,10 +120,12 @@ jobs:
             FINAL_REPLY_COUNT=$(find data/replies -name "*.json" | wc -l)
             FINAL_LIKE_COUNT=$(find data/likes -name "*.json" | wc -l)
             FINAL_ACTION_COUNT=$(find data/actions -name "*.json" | wc -l)
+            FINAL_MESSAGE_REF_COUNT=$(find data/message_refs -name "*.json" | wc -l)
             echo "📊 最終投稿数: $FINAL_POST_COUNT"
             echo "📊 最終リプライ数: $FINAL_REPLY_COUNT"
             echo "📊 最終いいね数: $FINAL_LIKE_COUNT"
             echo "📊 最終アクション数: $FINAL_ACTION_COUNT"
+            echo "📊 最終メッセージ参照数: $FINAL_MESSAGE_REF_COUNT"
           else
             echo "⚠️ 最終データディレクトリは存在しません"
           fi
@@ -289,6 +294,7 @@ jobs:
           echo "📊 リプライ数: $(find data/replies -name "*.json" | wc -l)"
           echo "📊 いいね数: $(find data/likes -name "*.json" | wc -l)"
           echo "📊 アクション数: $(find data/actions -name "*.json" | wc -l)"
+          echo "📊 メッセージ参照数: $(find data/message_refs -name "*.json" | wc -l)"
           echo "=== 最近の投稿 ==="
           find data/posts -name "*.json" -exec ls -lt {} + | head -5 || echo "投稿データが取得できません"
         fi
