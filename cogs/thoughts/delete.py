@@ -6,10 +6,10 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.post_manager import PostManager
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class Delete(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.file_manager = FileManager()
+        self.post_manager = PostManager()
     
     @app_commands.command(name="delete", description="🗑️ 投稿を削除")
     async def delete_post(self, interaction: Interaction) -> None:
@@ -27,7 +27,7 @@ class Delete(commands.Cog):
             await interaction.response.defer(ephemeral=True)
             
             # ユーザーの投稿を取得
-            posts = self.file_manager.search_posts(user_id=str(interaction.user.id))
+            posts = self.post_manager.search_posts(user_id=str(interaction.user.id))
             
             if not posts:
                 await interaction.followup.send(
@@ -148,7 +148,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             post_id = self.post_data['id']
             
             # 投稿ファイルを削除
-            success = self.cog.file_manager.delete_post(post_id)
+            success = self.cog.post_manager.delete_post(post_id)
             if not success:
                 logger.error(f"投稿の削除に失敗しました: 投稿ID={post_id}")
                 await interaction.followup.send(

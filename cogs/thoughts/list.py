@@ -6,10 +6,10 @@ import discord
 from discord import app_commands, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.post_manager import PostManager
 
 # ロガーの設定
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class List(commands.Cog):
             bot: Discord Bot インスタンス
         """
         self.bot: commands.Bot = bot
-        self.file_manager = FileManager()
+        self.post_manager = PostManager()
         logger.info("List cog が初期化されました")
 
     @app_commands.command(name='list', description='📋 あなたの投稿一覧を表示')
@@ -43,7 +43,7 @@ class List(commands.Cog):
             await interaction.response.defer(ephemeral=True)
             
             # 自分の投稿を取得
-            my_posts = self.file_manager.search_posts(user_id=str(interaction.user.id))
+            my_posts = self.post_manager.search_posts(user_id=str(interaction.user.id))
             
             if not my_posts:
                 embed = Embed(

@@ -12,10 +12,13 @@ import discord
 from discord import app_commands, ui, Interaction, Embed
 from discord.ext import commands
 
-# ファイルマネージャーをインポート
+# マネージャーをインポート
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from file_manager import FileManager
+from managers.post_manager import PostManager
+from managers.reply_manager import ReplyManager
+from managers.like_manager import LikeManager
+from managers.message_ref_manager import MessageRefManager
 from config import get_channel_id, extract_channel_id
 
 # ロガー設定
@@ -33,7 +36,10 @@ class Search(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.file_manager = FileManager()
+        self.post_manager = PostManager()
+        self.reply_manager = ReplyManager()
+        self.like_manager = LikeManager()
+        self.message_ref_manager = MessageRefManager()
         logger.info("Search cog が初期化されました")
     
     def _search_posts(
@@ -50,7 +56,7 @@ class Search(commands.Cog):
         try:
             if search_type == 'posts':
                 # 投稿検索
-                posts = self.file_manager.search_posts(
+                posts = self.post_manager.search_posts(
                     keyword=keyword,
                     category=category,
                     user_id=str(user_id) if user_id else None
@@ -66,11 +72,11 @@ class Search(commands.Cog):
             
             elif search_type == 'replies':
                 # リプライ検索 - 全投稿のリプライを検索
-                all_posts = self.file_manager.get_all_posts()
+                all_posts = self.post_manager.get_all_posts()
                 all_replies = []
                 
                 for post in all_posts:
-                    replies = self.file_manager.get_replies(post['id'])
+                    replies = self.reply_manager.get_replies(post['id'])
                     
                     for reply in replies:
                         # キーワードフィルタリング
@@ -94,11 +100,11 @@ class Search(commands.Cog):
             
             elif search_type == 'likes':
                 # いいね検索 - 全投稿のいいねを検索
-                all_posts = self.file_manager.get_all_posts()
+                all_posts = self.post_manager.get_all_posts()
                 all_likes = []
                 
                 for post in all_posts:
-                    likes = self.file_manager.get_likes(post['id'])
+                    likes = self.like_manager.get_likes(post['id'])
                     
                     for like in likes:
                         # キーワードフィルタリング
@@ -762,7 +768,7 @@ class ReplyModal(ui.Modal, title="💬 リプライ"):
             })
             
             # リプライをファイルに保存
-            reply_id = self.search_cog.file_manager.save_reply(
+            reply_id = self.search_cog.reply_manager.save_reply(
                 post_id=self.post['id'],
                 user_id=str(interaction.user.id),
                 content=reply_content,
