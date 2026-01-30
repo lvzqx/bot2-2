@@ -136,9 +136,16 @@ jobs:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
         APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
         ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
         # ボット起動時にデータディレクトリを指定
         export DATA_DIR="data"
+        
+        # Discordに開始通知
+        curl -X POST \
+          -H "Content-Type: application/json" \
+          -d '{"content": "🤖 ボット起動を開始します... ('$(date +%Y-%m-%d\ %H:%M:%S)')"}' \
+          "$DISCORD_WEBHOOK_URL" || true
         
         # 既存のプロセスを終了
         pkill -f "python.*bot.py" || true
@@ -146,11 +153,25 @@ jobs:
         # ボットを起動
         mkdir -p logs temp
         nohup python bot.py > logs/bot.log 2>&1 &
-        echo $! > temp/bot.pid
+        BOT_PID=$!
+        echo $BOT_PID > temp/bot.pid
         
         # プロセスが実行中か確認
-        if ! ps -p $(cat temp/bot.pid) > /dev/null; then
-          echo "ボットの起動に失敗しました"
+        sleep 5
+        if ps -p $BOT_PID > /dev/null; then
+          echo "✅ ボットが正常に起動しました: PID=$BOT_PID"
+          # Discordに成功通知
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"content": "✅ ボットが正常に起動しました！PID: '$BOT_PID' ('$(date +%Y-%m-%d\ %H:%M:%S)')"}' \
+            "$DISCORD_WEBHOOK_URL" || true
+        else
+          echo "❌ ボットの起動に失敗しました"
+          # Discordにエラー通知
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"content": "❌ ボットの起動に失敗しました！ ('$(date +%Y-%m-%d\ %H:%M:%S)')\n```'$(cat logs/bot.log)'```"}' \
+            "$DISCORD_WEBHOOK_URL" || true
           cat logs/bot.log
           exit 1
         fi
