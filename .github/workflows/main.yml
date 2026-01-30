@@ -1,0 +1,230 @@
+name: Discord Bot
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'  # 5分ごとにチェック
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    # 同じコミットに対して同時に複数のワークフローが実行されないようにする
+    concurrency: 
+      group: bot-${{ github.ref }}
+      cancel-in-progress: true
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Set timezone to Japan
+      run: |
+        sudo timedatectl set-timezone Asia/Tokyo
+        date
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # jqをインストール
+        sudo apt-get update && sudo apt-get install -y jq
+    
+    - name: Setup data directory
+      run: |
+        mkdir -p logs temp data/posts data/replies data/likes data/actions data/message_refs
+        chmod 755 logs temp data data/posts data/replies data/likes data/actions data/message_refs
+    
+    - name: Preserve existing data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # 既存のデータを保護（上書きしない）
+        if [ -d "data" ]; then
+          echo "✅ 既存のdataディレクトリを保護します"
+          echo "📊 データ情報:"
+          find data -name "*.json" | wc -l
+          echo "投稿数: $(find data/posts -name "*.json" | wc -l)"
+          echo "リプライ数: $(find data/replies -name "*.json" | wc -l)"
+          echo "いいね数: $(find data/likes -name "*.json" | wc -l)"
+          echo "アクション数: $(find data/actions -name "*.json" | wc -l)"
+          echo "メッセージ参照数: $(find data/message_refs -name "*.json" | wc -l)"
+        else
+          echo "⚠️ dataディレクトリが見つかりません"
+          echo "🔄 GitHubから取得を試みます..."
+          git fetch origin main
+          git checkout origin/main -- data/ 2>/dev/null || echo "⚠️ GitHubからの取得に失敗しました"
+          
+          if [ -d "data" ]; then
+            echo "✅ GitHubからdataディレクトリを取得しました"
+          else
+            echo "⚠️ GitHubにもdataディレクトリがありません"
+            echo "📝 新規に空のデータディレクトリを作成します"
+            mkdir -p data/posts data/replies data/likes data/actions data/message_refs
+          fi
+        fi
+    
+    - name: Check if data exists
+      run: |
+        # データの状態を確認
+        if [ -d "data" ]; then
+          echo "既存のデータディレクトリサイズ: $(du -sh data | cut -f1)"
+          if [ "$(find data -name "*.json" | wc -l)" -gt 0 ]; then
+            echo "✅ 既存のデータを使用します（データあり）"
+            
+            # データにファイルがあるか確認
+            POST_COUNT=$(find data/posts -name "*.json" | wc -l)
+            REPLY_COUNT=$(find data/replies -name "*.json" | wc -l)
+            LIKE_COUNT=$(find data/likes -name "*.json" | wc -l)
+            ACTION_COUNT=$(find data/actions -name "*.json" | wc -l)
+            MESSAGE_REF_COUNT=$(find data/message_refs -name "*.json" | wc -l)
+            echo "📊 データの投稿数: $POST_COUNT"
+            echo "📊 データのリプライ数: $REPLY_COUNT"
+            echo "📊 データのいいね数: $LIKE_COUNT"
+            echo "📊 データのアクション数: $ACTION_COUNT"
+            echo "📊 データのメッセージ参照数: $MESSAGE_REF_COUNT"
+            
+            if [ "$POST_COUNT" -gt 0 ]; then
+              echo "✅ データにデータが存在します。既存データを保護します。"
+            else
+              echo "⚠️ データが存在しません"
+            fi
+          else
+            echo "⚠️ データディレクトリが存在しません"
+            echo "🔄 GitHubから取得を試みます..."
+            git pull origin main || echo "⚠️ GitHubからの取得に失敗しました"
+            
+            if [ -d "data" ]; then
+              echo "✅ GitHubからデータディレクトリを取得しました"
+            else
+              echo "⚠️ GitHubにもデータディレクトリがありません"
+              echo "📝 新規に空のデータディレクトリを作成します"
+              mkdir -p data/posts data/replies data/likes data/actions data/message_refs
+            fi
+          fi
+          
+          # 最終的なデータ状態を確認
+          if [ -d "data" ]; then
+            echo "📊 最終データディレクトリサイズ: $(du -sh data | cut -f1)"
+            FINAL_POST_COUNT=$(find data/posts -name "*.json" | wc -l)
+            FINAL_REPLY_COUNT=$(find data/replies -name "*.json" | wc -l)
+            FINAL_LIKE_COUNT=$(find data/likes -name "*.json" | wc -l)
+            FINAL_ACTION_COUNT=$(find data/actions -name "*.json" | wc -l)
+            FINAL_MESSAGE_REF_COUNT=$(find data/message_refs -name "*.json" | wc -l)
+            echo "📊 最終投稿数: $FINAL_POST_COUNT"
+            echo "📊 最終リプライ数: $FINAL_REPLY_COUNT"
+            echo "📊 最終いいね数: $FINAL_LIKE_COUNT"
+            echo "📊 最終アクション数: $FINAL_ACTION_COUNT"
+            echo "📊 最終メッセージ参照数: $FINAL_MESSAGE_REF_COUNT"
+          else
+            echo "⚠️ 最終データディレクトリは存在しません"
+          fi
+        fi
+    
+    - name: Check if bot is running
+      id: check_bot
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
+        ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
+      run: |
+        # 既存の実行中のワークフローをチェック
+        RUNNING_JOBS=$(curl -s -H "Authorization: token ${{ github.token }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress" | \
+          jq -r '.workflow_runs[] | select(.id != ${{ github.run_id }}) | .id')
+        
+        if [ -z "$RUNNING_JOBS" ]; then
+          echo "ボットが実行されていないため、起動します"
+          echo "RUN_BOT=true" >> $GITHUB_ENV
+        else
+          echo "ボットは既に実行中です"
+          echo "RUN_BOT=false" >> $GITHUB_ENV
+        fi
+    
+    - name: Run bot
+      if: env.RUN_BOT == 'true'
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        APPLICATION_ID: ${{ secrets.APPLICATION_ID }}
+        ALLOWED_CHANNEL_IDS: ${{ secrets.ALLOWED_CHANNEL_ID }}
+      run: |
+        # ボット起動時にデータディレクトリを指定
+        export DATA_DIR="data"
+        
+        # 既存のプロセスを終了
+        pkill -f "python.*bot.py" || true
+        
+        # ボットを起動
+        mkdir -p logs temp
+        nohup python bot.py > logs/bot.log 2>&1 &
+        echo $! > temp/bot.pid
+        
+        # プロセスが実行中か確認
+        if ! ps -p $(cat temp/bot.pid) > /dev/null; then
+          echo "ボットの起動に失敗しました"
+          cat logs/bot.log
+          exit 1
+        fi
+        
+        echo "ボットが正常に起動しました"
+        
+        # 無限ループで待機
+        while true; do
+          # ボットがまだ実行中か確認
+          if ! ps -p $(cat temp/bot.pid) > /dev/null; then
+            echo "ボットが終了しました。再起動します..."
+            # 再起動
+            export DATA_DIR="data"
+            nohup python bot.py > logs/bot.log 2>&1 &
+            echo $! > temp/bot.pid
+            sleep 10
+          fi
+          # 10秒ごとにチェック（超高速対応）
+          sleep 10
+        done
+    
+    - name: Show logs
+      if: always()  # ボットがクラッシュしても必ず実行
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # データ同期を無効化（安定性のため）
+        echo "ℹ️ データ同期を無効化しました（ボットの安定性のため）"
+        DATA_CHANGED=false
+        
+        # データ同期を無効化（安定性のため）
+        echo "ℹ️ データ同期を無効化しました（ボットの安定性のため）"
+        echo "✅ ボットのデータ保存機能は安定して動作します"
+    
+    - name: Show logs
+      if: always()
+      run: |
+        if [ -f "logs/bot.log" ]; then
+          echo "=== 最終ログ ==="
+          echo "=== ERROR/WARNINGログを含む全ログ ==="
+          grep -E "(ERROR|WARNING)" logs/bot.log || echo "ERROR/WARNINGログが見つかりません"
+          echo "=== 最終50行 ==="
+          tail -n 50 logs/bot.log
+        fi
+        if [ -d "data" ]; then
+          echo "=== データ情報 ==="
+          echo "📁 データディレクトリサイズ: $(du -sh data | cut -f1)"
+          echo "📊 投稿数: $(find data/posts -name "*.json" | wc -l)"
+          echo "📊 リプライ数: $(find data/replies -name "*.json" | wc -l)"
+          echo "📊 いいね数: $(find data/likes -name "*.json" | wc -l)"
+          echo "📊 アクション数: $(find data/actions -name "*.json" | wc -l)"
+          echo "📊 メッセージ参照数: $(find data/message_refs -name "*.json" | wc -l)"
+          echo "=== 最近の投稿 ==="
+          find data/posts -name "*.json" -exec ls -lt {} + | head -5 || echo "投稿データが取得できません"
+        fi
