@@ -119,7 +119,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
         
         self.confirm_input = ui.TextInput(
             label="🗑️ 削除確認",
-            placeholder=f"本当に削除する場合は「DELETE」と入力",
+            placeholder=f"本当に削除する場合は「delete」と入力",
             required=True,
             style=discord.TextStyle.short,
             max_length=10
@@ -142,10 +142,10 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             await interaction.response.defer(ephemeral=True)
             
             # 削除確認
-            if self.confirm_input.value.strip().upper() != "DELETE":
+            if self.confirm_input.value.strip().lower() != "delete":
                 await interaction.followup.send(
                     "❌ **削除がキャンセルされました**\n\n"
-                    "確認キーワードが正しくありません。",
+                    "確認キーワードが正しくありません。「delete」と入力してください。",
                     ephemeral=True
                 )
                 return
