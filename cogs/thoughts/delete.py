@@ -173,6 +173,33 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             )
             
             # 関連データ削除をバックグラウンドで実行
+            
+            # Discordメッセージを削除
+            message_ref_data = self.cog.message_ref_manager.get_message_ref(post_id)
+            if message_ref_data:
+                message_id = message_ref_data.get('message_id')
+                channel_id = message_ref_data.get('channel_id')
+                
+                if message_id and channel_id:
+                    try:
+                        # 元の投稿チャンネルを取得
+                        original_channel = interaction.guild.get_channel(int(channel_id))
+                        if original_channel:
+                            # 元の投稿メッセージを削除
+                            original_message = await original_channel.fetch_message(int(message_id))
+                            await original_message.delete()
+                            logger.info(f"✅ 元の投稿メッセージを削除しました: メッセージID={message_id}")
+                    except discord.NotFound:
+                        logger.warning(f"⚠️ 元の投稿メッセージが見つかりません: メッセージID={message_id}")
+                    except discord.Forbidden:
+                        logger.error(f"❌ 元の投稿メッセージの削除権限がありません: メッセージID={message_id}")
+                    except Exception as e:
+                        logger.error(f"❌ 元の投稿メッセージ削除エラー: {e}")
+                else:
+                    logger.warning(f"⚠️ メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
+            else:
+                logger.warning(f"⚠️ メッセージ参照が見つかりません: 投稿ID={post_id}")
+            
             # メッセージ参照を削除
             self.cog.message_ref_manager.delete_message_ref(post_id)
             
