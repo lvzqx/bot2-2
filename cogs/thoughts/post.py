@@ -321,7 +321,7 @@ class Post(commands.Cog):
                     await interaction.followup.send(embed=embed, ephemeral=True)
                     
                     # GitHubに保存する処理
-                    from .github_sync import sync_to_github
+                    from utils.github_sync import sync_to_github
                     await sync_to_github("new post", interaction.user.name, post_id)
                 
             except Exception as e:
