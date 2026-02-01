@@ -173,5 +173,26 @@
     "post_id": 21,
     "action": "delete",
     "is_private": true
+  },
+  {
+    "timestamp": "2026-02-01T23:11:55.478257",
+    "user_id": "test_user_123",
+    "post_id": 20,
+    "action": "create",
+    "is_private": false
+  },
+  {
+    "timestamp": "2026-02-01T23:11:55.496585",
+    "user_id": "test_user_123",
+    "post_id": 20,
+    "action": "read",
+    "is_private": false
+  },
+  {
+    "timestamp": "2026-02-01T23:11:55.512948",
+    "user_id": "test_user_123",
+    "post_id": 20,
+    "action": "delete",
+    "is_private": false
   }
 ]
