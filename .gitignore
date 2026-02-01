@@ -108,7 +108,7 @@ dmypy.json
 # Discord Bot specific
 temp/
 cache/
-logs/
+# logs/ - Commented out to allow data/logs/access/ sync
 backups/
 bot.log
 bot.pid
