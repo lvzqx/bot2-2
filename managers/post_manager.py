@@ -227,7 +227,7 @@ class PostManager:
         return posts
     
     def update_post(self, post_id: int, content: str = None, category: str = None, 
-                   image_url: str = None, user_id: str = None) -> bool:
+                   image_url: str = None, user_id: str = None, message_id: str = None, channel_id: str = None) -> bool:
         """投稿を更新"""
         # 公開・非公開両方のディレクトリをチェック
         # 新形式のファイル名を試す
@@ -262,6 +262,12 @@ class PostManager:
                         
                         if image_url is not None:
                             post_data['image_url'] = image_url
+                        
+                        if message_id is not None:
+                            post_data['message_id'] = message_id
+                        
+                        if channel_id is not None:
+                            post_data['channel_id'] = channel_id
                         
                         post_data['updated_at'] = datetime.now().isoformat()
                         

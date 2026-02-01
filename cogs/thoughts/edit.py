@@ -171,13 +171,23 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             # 公開設定を処理（現在の設定を維持）
             is_public = not self.post_data.get('is_private', False)
             
+            # message_refからmessage_idとchannel_idを取得
+            message_ref_data = self.cog.message_ref_manager.get_message_ref(self.post_data['id'])
+            message_id = None
+            channel_id = None
+            if message_ref_data:
+                message_id = message_ref_data.get('message_id')
+                channel_id = message_ref_data.get('channel_id')
+            
             # post_managerを使って投稿を更新
             success = self.cog.post_manager.update_post(
                 post_id=self.post_data['id'],
                 content=new_content,
                 category=new_category,
                 image_url=new_image_url,
-                user_id=str(interaction.user.id)
+                user_id=str(interaction.user.id),
+                message_id=message_id,
+                channel_id=channel_id
             )
             
             if not success:
@@ -198,11 +208,11 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             )
             
             # Discordメッセージをバックグラウンドで更新
-            if self.post_data.get('message_id') and self.post_data.get('channel_id'):
+            if message_id and channel_id:
                 try:
-                    channel = interaction.guild.get_channel(int(self.post_data['channel_id']))
+                    channel = interaction.guild.get_channel(int(channel_id))
                     if channel:
-                        message = await channel.fetch_message(int(self.post_data['message_id']))
+                        message = await channel.fetch_message(int(message_id))
                         if message.embeds:
                             embed = message.embeds[0]
                             # post.pyと同じ形式で更新
@@ -226,7 +236,7 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
                     logger.error(f"Discordメッセージ更新中にエラー: {e}")
             
             # GitHubに保存する処理
-            from .github_sync import sync_to_github
+            from utils.github_sync import sync_to_github
             await sync_to_github("edit post", interaction.user.name, self.post_data['id'])
             
         except Exception as e:
