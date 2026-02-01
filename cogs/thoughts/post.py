@@ -115,6 +115,7 @@ class Post(commands.Cog):
                 
                 # 公開・非公開で処理を分ける
                 sent_message = None
+                post_id = None
                 if is_public:
                     # 公開チャンネルに投稿
                     channel_url = get_channel_id('public')
@@ -139,12 +140,11 @@ class Post(commands.Cog):
                     if image_url:
                         embed.set_image(url=image_url)
 
+                    # footerはpost_id取得後に設定
                     footer_parts = []
                     if category:
                         footer_parts.append(f"カテゴリー: {category}")
-                    footer_parts.append(f"投稿ID: {post_id}")
-                    # UIDは表示しない
-                    embed.set_footer(text=" | ".join(footer_parts))
+                    # 投稿IDは保存後に設定
                     
                     # メッセージを送信
                     sent_message = await channel.send(embed=embed)
@@ -193,6 +193,12 @@ class Post(commands.Cog):
                         ephemeral=True
                     )
                     return
+                
+                # post_id取得後にembedのfooterを更新
+                if is_public and sent_message:
+                    footer_parts.append(f"投稿ID: {post_id}")
+                    embed.set_footer(text=" | ".join(footer_parts))
+                    await sent_message.edit(embed=embed)
                 
                 # 非公開投稿の場合はスレッド処理を続行
                 if not is_public:
