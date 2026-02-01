@@ -152,6 +152,17 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             
             post_id = self.post_data['id']
             
+            # 投稿の存在と権限を確認
+            post = self.cog.post_manager.get_post(post_id, str(interaction.user.id))
+            if not post:
+                logger.error(f"投稿の削除に失敗しました: 投稿ID={post_id}, 権限なしまたは存在しない")
+                await interaction.followup.send(
+                    "❌ **投稿が見つかりません**\n\n"
+                    "投稿が存在しないか、削除権限がありません。",
+                    ephemeral=True
+                )
+                return
+            
             # 投稿ファイルを削除
             success = self.cog.post_manager.delete_post(post_id, str(interaction.user.id))
             if not success:
