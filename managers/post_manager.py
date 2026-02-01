@@ -161,6 +161,43 @@ class PostManager:
         
         return post_id
     
+    def update_post_message_ref(self, post_id: int, message_id: str, channel_id: str) -> bool:
+        """投稿のmessage_idとchannel_idを更新"""
+        try:
+            # 公開・非公開両方のディレクトリをチェック
+            filenames_to_try = [
+                f"public_post_{post_id}.json",
+                f"private_post_{post_id}.json"
+            ]
+            
+            updated = False
+            for filename in filenames_to_try:
+                filepath = None
+                if os.path.exists(os.path.join(self.public_posts_dir, filename)):
+                    filepath = os.path.join(self.public_posts_dir, filename)
+                elif os.path.exists(os.path.join(self.private_posts_dir, filename)):
+                    filepath = os.path.join(self.private_posts_dir, filename)
+                
+                if filepath:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        post_data = json.load(f)
+                    
+                    # message_idとchannel_idを更新
+                    post_data['message_id'] = message_id
+                    post_data['channel_id'] = channel_id
+                    post_data['updated_at'] = datetime.now().isoformat()
+                    
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        json.dump(post_data, f, ensure_ascii=False, indent=2)
+                    
+                    updated = True
+                    break
+            
+            return updated
+        except Exception as e:
+            logger.error(f"投稿のmessage_ref更新中にエラー: {e}")
+            return False
+    
     def get_post(self, post_id: int, user_id: str = None) -> Optional[Dict[str, Any]]:
         """投稿を取得"""
         # 公開・非公開両方のディレクトリをチェック

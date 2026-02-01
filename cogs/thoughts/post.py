@@ -116,6 +116,42 @@ class Post(commands.Cog):
                 # 公開・非公開で処理を分ける
                 sent_message = None
                 post_id = None
+                
+                # まず投稿を保存してpost_idを取得
+                try:
+                    # 最初のPost cogを取得
+                    post_cog = self.cog if hasattr(self, 'cog') else None
+                    if not post_cog:
+                        # interaction.clientからPost cogを取得
+                        post_cog = interaction.client.get_cog('Post')
+                    
+                    if not post_cog:
+                        await interaction.followup.send(
+                            "❌ エラーが発生しました。Post cogが見つかりません。",
+                            ephemeral=True
+                        )
+                        return
+                    
+                    # 仮のmessage_idとchannel_idで一旦保存（後で更新）
+                    post_id = post_cog.post_manager.save_post(
+                        user_id=str(interaction.user.id),
+                        content=message,
+                        category=category,
+                        image_url=image_url,
+                        is_anonymous=is_anonymous,
+                        is_private=not is_public,
+                        display_name=interaction.user.display_name,
+                        message_id="temp",  # 仮の値
+                        channel_id="temp"   # 仮の値
+                    )
+                except Exception as e:
+                    logger.error(f"ファイル保存中にエラー: {e}", exc_info=True)
+                    await interaction.followup.send(
+                        f"❌ 投稿の保存中にエラーが発生しました: {str(e)}",
+                        ephemeral=True
+                    )
+                    return
+                
                 if is_public:
                     # 公開チャンネルに投稿
                     channel_url = get_channel_id('public')
@@ -161,45 +197,15 @@ class Post(commands.Cog):
                     thread_prefix = f"非公開投稿 - {interaction.user.id}"
                     target_thread: Optional[discord.Thread] = None
                 
-                # メッセージ送信後に投稿を保存
-                try:
-                    # 最初のPost cogを取得
-                    post_cog = self.cog if hasattr(self, 'cog') else None
-                    if not post_cog:
-                        # interaction.clientからPost cogを取得
-                        post_cog = interaction.client.get_cog('Post')
-                    
-                    if not post_cog:
-                        await interaction.followup.send(
-                            "❌ エラーが発生しました。Post cogが見つかりません。",
-                            ephemeral=True
-                        )
-                        return
-                    
-                    post_id = post_cog.post_manager.save_post(
-                        user_id=str(interaction.user.id),
-                        content=message,
-                        category=category,
-                        image_url=image_url,
-                        is_anonymous=is_anonymous,
-                        is_private=not is_public,
-                        display_name=interaction.user.display_name,
-                        message_id=str(sent_message.id),
-                        channel_id=str(sent_message.channel.id)
-                    )
-                except Exception as e:
-                    logger.error(f"ファイル保存中にエラー: {e}", exc_info=True)
-                    await interaction.followup.send(
-                        f"❌ 投稿の保存中にエラーが発生しました: {str(e)}",
-                        ephemeral=True
-                    )
-                    return
+                # メッセージ送信後にmessage_refを更新
+                self.cog.message_ref_manager.save_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id), str(interaction.user.id))
+                logger.info(f"メッセージ参照を保存しました: 投稿ID={post_id}")
                 
-                # post_id取得後にembedのfooterを更新（編集を避ける）
-                if is_public and sent_message:
-                    # 編集を避けるため、ここではembedを更新しない
-                    # ユーザーには完了メッセージでpost_idを通知する
-                    logger.info(f"投稿ID {post_id} を埋め込み込みましたが、編集表示を避けるためembedは更新しません")
+                # 投稿データのmessage_idとchannel_idを更新
+                try:
+                    post_cog.post_manager.update_post_message_ref(post_id, str(sent_message.id), str(sent_message.channel.id))
+                except Exception as e:
+                    logger.warning(f"投稿のmessage_ref更新中にエラー: {e}")
                 
                 # 非公開投稿の場合はスレッド処理を続行
                 if not is_public:
