@@ -167,7 +167,7 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
             logger.info(f"リプライを更新しました: 投稿ID={post_id}, リプライID={reply_id}")
             
             # GitHubに保存する処理
-            from .github_sync import sync_to_github
+            from utils.github_sync import sync_to_github
             await sync_to_github("edit reply", interaction.user.name, reply_id)
             
             await interaction.followup.send(

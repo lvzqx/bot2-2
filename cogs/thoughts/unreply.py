@@ -131,7 +131,7 @@ class UnreplyModal(ui.Modal, title="� リプライを削除"):
             logger.info(f"✅ リプライ削除完了: リプライID={reply_id}, ユーザーID={user_id}")
             
             # GitHubに保存する処理
-            from .github_sync import sync_to_github
+            from utils.github_sync import sync_to_github
             await sync_to_github("unreply", interaction.user.name, reply_id)
             
         except ValueError:

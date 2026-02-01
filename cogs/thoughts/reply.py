@@ -139,7 +139,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
             logger.info(f"✅ リプライが作成されました: 投稿ID={post_id}, リプライID={reply_id}, ユーザーID={interaction.user.id}")
             
             # GitHubに保存する処理
-            from .github_sync import sync_to_github
+            from utils.github_sync import sync_to_github
             await sync_to_github("reply", interaction.user.name, post_id)
             
         except ValueError:

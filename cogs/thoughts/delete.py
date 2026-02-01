@@ -213,7 +213,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             self.cog.message_ref_manager.delete_message_ref(post_id)
             
             # GitHubに保存する処理
-            from .github_sync import sync_to_github
+            from utils.github_sync import sync_to_github
             await sync_to_github("delete post", interaction.user.name, post_id)
             
         except Exception as e:
