@@ -172,12 +172,24 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             is_public = not self.post_data.get('is_private', False)
             
             # message_refからmessage_idとchannel_idを取得
+            logger.info(f"message_ref取得開始: 投稿ID={self.post_data['id']}")
             message_ref_data = self.cog.message_ref_manager.get_message_ref(self.post_data['id'])
             message_id = None
             channel_id = None
             if message_ref_data:
                 message_id = message_ref_data.get('message_id')
                 channel_id = message_ref_data.get('channel_id')
+                logger.info(f"message_ref取得成功: message_id={message_id}, channel_id={channel_id}")
+            else:
+                logger.warning(f"⚠️ message_refが見つかりません: 投稿ID={self.post_data['id']}")
+                # 投稿データから直接取得を試みる
+                post_data = self.cog.post_manager.get_post(self.post_data['id'], str(interaction.user.id))
+                if post_data:
+                    message_id = post_data.get('message_id')
+                    channel_id = post_data.get('channel_id')
+                    logger.info(f"投稿データから取得: message_id={message_id}, channel_id={channel_id}")
+                else:
+                    logger.warning(f"⚠️ 投稿データも見つかりません: 投稿ID={self.post_data['id']}")
             
             # post_managerを使って投稿を更新
             success = self.cog.post_manager.update_post(
@@ -210,30 +222,43 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
             # Discordメッセージをバックグラウンドで更新
             if message_id and channel_id:
                 try:
+                    logger.info(f"Discordメッセージ更新開始: message_id={message_id}, channel_id={channel_id}")
                     channel = interaction.guild.get_channel(int(channel_id))
                     if channel:
+                        logger.info(f"チャンネル取得成功: {channel.name} (ID: {channel.id})")
                         message = await channel.fetch_message(int(message_id))
-                        if message.embeds:
-                            embed = message.embeds[0]
-                            # post.pyと同じ形式で更新
-                            embed.description = new_content
-                            if new_image_url:
-                                embed.set_image(url=new_image_url)
+                        if message:
+                            logger.info(f"メッセージ取得成功: {message.id}")
+                            if message.embeds:
+                                logger.info(f"embeds取得成功: {len(message.embeds)}個")
+                                embed = message.embeds[0]
+                                # post.pyと同じ形式で更新
+                                embed.description = new_content
+                                if new_image_url:
+                                    embed.set_image(url=new_image_url)
+                                else:
+                                    # 画像URLが空の場合は画像をクリア
+                                    embed.set_image(url=None)
+                                
+                                # Footerを更新 - post.pyと同じ形式
+                                footer_parts = []
+                                if new_category:
+                                    footer_parts.append(f"カテゴリー: {new_category}")
+                                footer_parts.append(f"投稿ID: {self.post_data['id']}")
+                                embed.set_footer(text=" | ".join(footer_parts))
+                                
+                                await message.edit(embed=embed)
+                                logger.info(f"✅ Discordメッセージ更新完了: 投稿ID={self.post_data['id']}")
                             else:
-                                # 画像URLが空の場合は画像をクリア
-                                embed.set_image(url=None)
-                            
-                            # Footerを更新 - post.pyと同じ形式
-                            footer_parts = []
-                            if new_category:
-                                footer_parts.append(f"カテゴリー: {new_category}")
-                            footer_parts.append(f"投稿ID: {self.post_data['id']}")
-                            embed.set_footer(text=" | ".join(footer_parts))
-                            
-                            await message.edit(embed=embed)
-                            logger.info(f"✅ Discordメッセージ更新完了: 投稿ID={self.post_data['id']}")
+                                logger.warning(f"⚠️ メッセージにembedsがありません: message_id={message_id}")
+                        else:
+                            logger.warning(f"⚠️ メッセージ取得失敗: message_id={message_id}")
+                    else:
+                        logger.warning(f"⚠️ チャンネル取得失敗: channel_id={channel_id}")
                 except Exception as e:
-                    logger.error(f"Discordメッセージ更新中にエラー: {e}")
+                    logger.error(f"❌ Discordメッセージ更新中にエラー: {e}", exc_info=True)
+            else:
+                logger.warning(f"⚠️ message_idまたはchannel_idがありません: message_id={message_id}, channel_id={channel_id}")
             
             # GitHubに保存する処理
             from utils.github_sync import sync_to_github
