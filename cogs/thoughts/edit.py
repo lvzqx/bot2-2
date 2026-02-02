@@ -245,10 +245,22 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
                         logger.warning(f"⚠️ チャンネル取得失敗: channel_id={channel_id}")
                 except Exception as e:
                     logger.error(f"❌ Discordメッセージ更新中にエラー: {e}", exc_info=True)
+                    # 404エラーの場合はメッセージが存在しないことを通知
+                    if "404" in str(e) or "Unknown Message" in str(e):
+                        logger.warning(f"⚠️ Discordメッセージが見つかりません: message_id={message_id}")
+                        logger.warning(f"⚠️ メッセージが削除された可能性があります。message_refのクリーンアップが必要です。")
+                        # message_refをクリーンアップ
+                        try:
+                            self.cog.message_ref_manager.delete_message_ref(self.post_data['id'])
+                            logger.info(f"✅ 存在しないメッセージのmessage_refを削除しました: 投稿ID={self.post_data['id']}")
+                        except Exception as cleanup_error:
+                            logger.error(f"❌ message_refクリーンアップ中にエラー: {cleanup_error}")
+                    else:
+                        logger.error(f"❌ その他のDiscordメッセージ更新エラー: {e}")
             else:
                 logger.warning(f"⚠️ message_idまたはchannel_idがありません: message_id={message_id}, channel_id={channel_id}")
             
-            # 成功メッセージを送信
+            # 成功メッセージを送信（Discordメッセージ更新失敗時も送信）
             await interaction.followup.send(
                 f"✅ **投稿を編集しました！**\n\n"
                 f"投稿ID: {self.post_data['id']} を更新しました。",

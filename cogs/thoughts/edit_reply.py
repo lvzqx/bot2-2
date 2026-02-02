@@ -204,6 +204,19 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
                         logger.warning(f"⚠️ チャンネル取得失敗: channel_id={channel_id}")
                 except Exception as e:
                     logger.error(f"❌ リプライDiscordメッセージ更新中にエラー: {e}", exc_info=True)
+                    # 404エラーの場合はメッセージが存在しないことを通知
+                    if "404" in str(e) or "Unknown Message" in str(e):
+                        logger.warning(f"⚠️ リプライDiscordメッセージが見つかりません: message_id={message_id}")
+                        logger.warning(f"⚠️ リプライメッセージが削除された可能性があります。message_refのクリーンアップが必要です。")
+                        # リプライのmessage_refをクリーンアップ（ReplyManagerにメソッドが必要な場合は追加）
+                        try:
+                            # TODO: ReplyManagerにdelete_reply_message_refメソッドを追加
+                            # self.cog.reply_manager.delete_reply_message_ref(reply_id)
+                            logger.info(f"⚠️ リプライmessage_refのクリーンアップ機能は未実装です: リプライID={reply_id}")
+                        except Exception as cleanup_error:
+                            logger.error(f"❌ リプライmessage_refクリーンアップ中にエラー: {cleanup_error}")
+                    else:
+                        logger.error(f"❌ その他のリプライDiscordメッセージ更新エラー: {e}")
             else:
                 logger.warning(f"⚠️ message_idまたはchannel_idがありません: message_id={message_id}, channel_id={channel_id}")
             
@@ -211,6 +224,7 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
             from utils.github_sync import sync_to_github
             await sync_to_github("edit reply", interaction.user.name, reply_id)
             
+            # 成功メッセージを送信（Discordメッセージ更新失敗時も送信）
             await interaction.followup.send(
                 f"✅ **リプライを更新しました**\n\n"
                 f"投稿ID: {post_id}\n"
