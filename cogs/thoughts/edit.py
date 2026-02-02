@@ -233,12 +233,7 @@ class PostEditModal(ui.Modal, title="投稿を編集"):
                                     # 画像URLが空の場合は画像をクリア
                                     embed.set_image(url=None)
                                 
-                                # Footerを更新 - post.pyと同じ形式
-                                footer_parts = []
-                                if new_category:
-                                    footer_parts.append(f"カテゴリー: {new_category}")
-                                footer_parts.append(f"投稿ID: {self.post_data['id']}")
-                                embed.set_footer(text=" | ".join(footer_parts))
+                                # Footerは維持（更新しない）
                                 
                                 await message.edit(embed=embed)
                                 logger.info(f"✅ Discordメッセージ更新完了: 投稿ID={self.post_data['id']}")

@@ -192,7 +192,7 @@ class ReplyEditModal(ui.Modal, title="💬 リプライを編集"):
                                 embed = message.embeds[0]
                                 # リプライembedを更新
                                 embed.description = self.content_input.value
-                                embed.set_footer(text=f"リプライID: {reply_id}")
+                                # Footerは維持（更新しない）
                                 
                                 await message.edit(embed=embed)
                                 logger.info(f"✅ リプライDiscordメッセージ更新完了: リプライID={reply_id}")
