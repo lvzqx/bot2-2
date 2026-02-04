@@ -159,15 +159,6 @@ class Like(commands.Cog):
             logger.error(f"いいねモーダル表示中にエラーが発生しました: {e}", exc_info=True)
             await interaction.response.send_message(
                 "❌ **エラーが発生しました**\n\n"
-                "いいねモーダルの表示中にエラーが発生しました。もう一度お試しください。",
+                "いいねの追加に失敗しました。",
                 ephemeral=True
             )
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップ"""
-    try:
-        await bot.add_cog(Like(bot))
-        logger.info("Like cog がセットアップされました")
-    except Exception as e:
-        logger.error(f"Like cog セットアップ中にエラーが発生しました: {e}", exc_info=True)
-        raise

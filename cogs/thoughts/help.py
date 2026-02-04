@@ -60,7 +60,3 @@ class Help(commands.Cog):
                     "ヘルプの表示中にエラーが発生しました。", 
                     ephemeral=True
                 )
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをボットに追加"""
-    await bot.add_cog(Help(bot))

@@ -173,17 +173,8 @@ class Reply(commands.Cog):
             await interaction.response.send_modal(ReplyModal(self.reply_manager, self.post_manager, self.message_ref_manager))
         except Exception as e:
             logger.error(f"リプライモーダル表示中にエラーが発生しました: {e}", exc_info=True)
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "リプライモーダルの表示中にエラーが発生しました。もう一度お試しください。",
+                "リプライの作成に失敗しました。",
                 ephemeral=True
             )
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップ"""
-    try:
-        await bot.add_cog(Reply(bot))
-        logger.info("Reply cog がセットアップされました")
-    except Exception as e:
-        logger.error(f"Reply cog セットアップ中にエラーが発生しました: {e}", exc_info=True)
-        raise

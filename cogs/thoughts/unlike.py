@@ -175,17 +175,8 @@ class Unlike(commands.Cog):
             await interaction.response.send_modal(UnlikeModal(self.like_manager, self.post_manager))
         except Exception as e:
             logger.error(f"いいね削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "モーダルの表示中にエラーが発生しました。もう一度お試しください。",
+                "いいねの削除に失敗しました。",
                 ephemeral=True
             )
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップ"""
-    try:
-        await bot.add_cog(Unlike(bot))
-        logger.info("Unlike cog がセットアップされました")
-    except Exception as e:
-        logger.error(f"Unlike cog セットアップ中にエラーが発生しました: {e}", exc_info=True)
-        raise

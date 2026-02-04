@@ -143,7 +143,3 @@ class Search(commands.Cog):
             
         except Exception:
             return False
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップする"""
-    await bot.add_cog(Search(bot))

@@ -122,12 +122,8 @@ class Post(commands.Cog):
         except Exception as e:
             logger.error(f"投稿保存中にエラーが発生しました: {e}", exc_info=True)
             await interaction.followup.send(
-                f"❌ **投稿の保存中にエラーが発生しました**\n\n"
-                f"詳細: {str(e)}",
+                "❌ **エラーが発生しました**\n\n"
+                "投稿の保存に失敗しました。",
                 ephemeral=True
             )
             return None
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップする"""
-    await bot.add_cog(Post(bot))

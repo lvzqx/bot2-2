@@ -121,7 +121,3 @@ class Edit(commands.Cog):
         except Exception as e:
             logger.error(f"投稿更新中にエラーが発生しました: {e}")
             return False
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップする"""
-    await bot.add_cog(Edit(bot))

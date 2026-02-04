@@ -89,13 +89,3 @@ class List(commands.Cog):
                 color=discord.Color.red()
             )
             await interaction.followup.send(embed=error_embed, ephemeral=True)
-
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップ"""
-    try:
-        await bot.add_cog(List(bot))
-        logger.info("List cog がセットアップされました")
-    except Exception as e:
-        logger.error(f"List cog セットアップ中にエラーが発生しました: {e}", exc_info=True)
-        raise

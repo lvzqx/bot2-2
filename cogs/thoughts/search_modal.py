@@ -1,5 +1,5 @@
 """
-検索用モーダルとビュー
+検索モーダル
 """
 
 import logging
@@ -8,14 +8,11 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 import discord
-from discord import app_commands, ui, Interaction, Embed
+from discord import app_commands, ui, Interaction
 from discord.ext import commands
 
 # ロガー設定
 logger = logging.getLogger(__name__)
-
-# 定数
-ITEMS_PER_PAGE = 3
 
 class SearchModal(ui.Modal, title='🔍 詳細検索'):
     """詳細検索用モーダル"""
@@ -131,125 +128,3 @@ class SearchModal(ui.Modal, title='🔍 詳細検索'):
                 "検索中にエラーが発生しました。",
                 ephemeral=True
             )
-
-class SearchResultsView(ui.View):
-    """検索結果表示用ビュー"""
-    
-    def __init__(self, cog, results: List[Dict[str, Any]], search_type: str):
-        super().__init__(timeout=None)
-        self.cog = cog
-        self.results = results
-        self.search_type = search_type
-        self.current_page = 1
-        self.total_pages = (len(results) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
-        
-        # ボタンを追加
-        self._add_buttons()
-    
-    def _add_buttons(self):
-        """ボタンを追加"""
-        if self.total_pages > 1:
-            # 前のページボタン
-            self.prev_button = ui.Button(
-                label='◀️ 前へ',
-                style=discord.ButtonStyle.secondary,
-                disabled=self.current_page <= 1
-            )
-            self.prev_button.callback = self.prev_page_callback
-            self.add_item(self.prev_button)
-            
-            # 次のページボタン
-            self.next_button = ui.Button(
-                label='次へ ▶️',
-                style=discord.ButtonStyle.secondary,
-                disabled=self.current_page >= self.total_pages
-            )
-            self.next_button.callback = self.next_page_callback
-            self.add_item(self.next_button)
-            
-            # ページ情報ボタン
-            self.page_button = ui.Button(
-                label=f'{self.current_page}/{self.total_pages}',
-                style=discord.ButtonStyle.primary,
-                disabled=True
-            )
-            self.add_item(self.page_button)
-    
-    async def prev_page_callback(self, interaction: Interaction):
-        """前のページ"""
-        if self.current_page > 1:
-            self.current_page -= 1
-            await self._update_page(interaction)
-    
-    async def next_page_callback(self, interaction: Interaction):
-        """次のページ"""
-        if self.current_page < self.total_pages:
-            self.current_page += 1
-            await self._update_page(interaction)
-    
-    async def _update_page(self, interaction: Interaction):
-        """ページを更新"""
-        # Embedを再作成
-        from .search_utils import create_search_embed
-        embed = create_search_embed(
-            self.results,
-            self.search_type,
-            self.current_page,
-            self.total_pages
-        )
-        
-        # ボタンの状態を更新
-        if self.total_pages > 1:
-            self.prev_button.disabled = self.current_page <= 1
-            self.next_button.disabled = self.current_page >= self.total_pages
-            self.page_button.label = f'{self.current_page}/{self.total_pages}'
-        
-        await interaction.response.edit_message(embed=embed, view=self)
-
-class SearchTypeView(ui.View):
-    """検索タイプ選択用ビュー"""
-    
-    def __init__(self, cog):
-        super().__init__(timeout=None)
-        self.cog = cog
-        
-        self.select = ui.Select(
-            placeholder="検索タイプを選択してください",
-            options=[
-                discord.SelectOption(
-                    label="📝 投稿検索",
-                    description="投稿を検索します",
-                    emoji="📝"
-                ),
-                discord.SelectOption(
-                    label="💬 リプライ検索",
-                    description="リプライを検索します",
-                    emoji="💬"
-                ),
-                discord.SelectOption(
-                    label="🔍 詳細検索",
-                    description="詳細な条件で検索します",
-                    emoji="🔍"
-                )
-            ]
-        )
-        
-        self.select.callback = self.select_callback
-        self.add_item(self.select)
-    
-    async def select_callback(self, interaction: Interaction):
-        """選択時のコールバック"""
-        selected = self.select.values[0]
-        
-        if selected == "📝 投稿検索":
-            modal = SearchModal(self.cog)
-            modal.title = "📝 投稿検索"
-            await interaction.response.send_modal(modal)
-        elif selected == "💬 リプライ検索":
-            modal = SearchModal(self.cog)
-            modal.title = "💬 リプライ検索"
-            await interaction.response.send_modal(modal)
-        elif selected == "🔍 詳細検索":
-            modal = SearchModal(self.cog)
-            modal.title = "🔍 詳細検索"
-            await interaction.response.send_modal(modal)

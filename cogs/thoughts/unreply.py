@@ -163,17 +163,8 @@ class Unreply(commands.Cog):
             await interaction.response.send_modal(UnreplyModal(self.reply_manager))
         except Exception as e:
             logger.error(f"リプライ削除モーダル表示中にエラーが発生しました: {e}", exc_info=True)
-            await interaction.response.send_message(
-                "❌ **エラーが発生しました**\n\n"
-                "モーダルの表示中にエラーが発生しました。もう一度お試しください。",
+            await interaction.followup.send(
+                " **エラーが発生しました**\n\n"
+                "リプライの削除に失敗しました。",
                 ephemeral=True
             )
-
-async def setup(bot: commands.Bot) -> None:
-    """Cogをセットアップ"""
-    try:
-        await bot.add_cog(Unreply(bot))
-        logger.info("Unreply cog がセットアップされました")
-    except Exception as e:
-        logger.error(f"Unreply cog セットアップ中にエラーが発生しました: {e}", exc_info=True)
-        raise

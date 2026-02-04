@@ -238,29 +238,49 @@ class PostManager:
         """全投稿を取得"""
         posts = []
         
+        logger.info(f"🔍 PostManager.get_all_posts: user_id={user_id}")
+        logger.info(f"  - 公開ディレクトリ: {self.public_posts_dir}")
+        logger.info(f"  - 非公開ディレクトリ: {self.private_posts_dir}")
+        
         # 公開・非公開両方のディレクトリをチェック
         for directory in [self.public_posts_dir, self.private_posts_dir]:
+            logger.info(f"🔍 ディレクトリチェック: {directory}")
+            
             if not os.path.exists(directory):
+                logger.warning(f"  ⚠️ ディレクトリが存在しません: {directory}")
                 continue
-                
-            for filename in sorted(os.listdir(directory)):
-                if filename.endswith('.json'):
-                    try:
-                        # public_post_1.json や private_post_1.json からIDを抽出
-                        if filename.startswith('public_post_'):
-                            post_id = int(filename.replace('public_post_', '').replace('.json', ''))
-                        elif filename.startswith('private_post_'):
-                            post_id = int(filename.replace('private_post_', '').replace('.json', ''))
-                        else:
-                            # 旧形式のファイル名対応
-                            post_id = int(filename.replace('.json', ''))
+            
+            files = [f for f in os.listdir(directory) if f.endswith('.json')]
+            logger.info(f"  📁 JSONファイル数: {len(files)}")
+            
+            for filename in sorted(files):
+                try:
+                    # public_post_1.json や private_post_1.json からIDを抽出
+                    if filename.startswith('public_post_'):
+                        post_id = int(filename.replace('public_post_', '').replace('.json', ''))
+                    elif filename.startswith('private_post_'):
+                        post_id = int(filename.replace('private_post_', '').replace('.json', ''))
+                    else:
+                        # 旧形式のファイル名対応
+                        post_id = int(filename.replace('.json', ''))
+                    
+                    logger.info(f"  📄 ファイル読み込み: {filename} (ID: {post_id})")
+                    
+                    post = self.get_post(post_id, user_id)
+                    if post:
+                        posts.append(post)
+                        logger.info(f"    ✅ 投稿読み込み成功: ID={post_id}")
+                    else:
+                        logger.warning(f"    ❌ 投稿読み込み失敗: ID={post_id}")
                         
-                        post = self.get_post(post_id, user_id)
-                        if post:
-                            posts.append(post)
-                    except ValueError:
-                        continue
+                except ValueError as e:
+                    logger.error(f"    ❌ ファイル名解析エラー: {filename} - {e}")
+                    continue
+                except Exception as e:
+                    logger.error(f"    ❌ ファイル処理エラー: {filename} - {e}")
+                    continue
         
+        logger.info(f"🔍 get_all_posts完了: 全{len(posts)}件の投稿を取得")
         return posts
     
     def update_post(self, post_id: int, content: str = None, category: str = None, 
