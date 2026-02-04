@@ -219,7 +219,7 @@ class Unlike(commands.Cog):
     async def process_unlike(self, interaction: Interaction, like_data: Dict[str, Any]) -> None:
         """いいね削除処理を実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（セレクトメニューで既にレスポンス済み）
             
             like_id = like_data['id']
             post_id = like_data['post_id']

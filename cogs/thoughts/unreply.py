@@ -199,7 +199,7 @@ class Unreply(commands.Cog):
     async def process_unreply(self, interaction: Interaction, reply_data: Dict[str, Any]) -> None:
         """リプライ削除処理を実行"""
         try:
-            await interaction.response.defer(ephemeral=True)
+            # interaction.response.defer()は呼ばない（セレクトメニューで既にレスポンス済み）
             
             reply_id = reply_data['id']
             post_id = reply_data['post_id']
