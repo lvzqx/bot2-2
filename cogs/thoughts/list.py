@@ -89,3 +89,7 @@ class List(commands.Cog):
                 color=discord.Color.red()
             )
             await interaction.followup.send(embed=error_embed, ephemeral=True)
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(List(bot))

@@ -168,3 +168,7 @@ class Unreply(commands.Cog):
                 "リプライの削除に失敗しました。",
                 ephemeral=True
             )
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Unreply(bot))

@@ -24,7 +24,8 @@ from managers.action_manager import ActionManager
 from config import get_channel_id, extract_channel_id
 
 # モーダルとユーティリティをインポート
-from .search_modal import SearchModal, SearchResultsView, SearchTypeView
+from .search_modal import SearchModal, SearchTypeView
+from .search_pagination import SearchResultsView
 from .search_utils import search_posts, search_replies, create_search_embed
 
 # ロガー設定
@@ -143,3 +144,7 @@ class Search(commands.Cog):
             
         except Exception:
             return False
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Search(bot))

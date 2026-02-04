@@ -178,3 +178,7 @@ class Reply(commands.Cog):
                 "リプライの作成に失敗しました。",
                 ephemeral=True
             )
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Reply(bot))

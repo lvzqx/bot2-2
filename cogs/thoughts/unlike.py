@@ -180,3 +180,7 @@ class Unlike(commands.Cog):
                 "いいねの削除に失敗しました。",
                 ephemeral=True
             )
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Unlike(bot))

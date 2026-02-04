@@ -56,7 +56,11 @@ class Help(commands.Cog):
         except Exception as e:
             logger.error(f'Help command error: {e}', exc_info=True)
             if not interaction.response.is_done():
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "ヘルプの表示中にエラーが発生しました。", 
                     ephemeral=True
                 )
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Help(bot))

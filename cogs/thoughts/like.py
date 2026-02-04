@@ -162,3 +162,7 @@ class Like(commands.Cog):
                 "いいねの追加に失敗しました。",
                 ephemeral=True
             )
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Like(bot))

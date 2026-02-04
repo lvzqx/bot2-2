@@ -210,3 +210,7 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                 "投稿の削除に失敗しました。",
                 ephemeral=True
             )
+
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
+    await bot.add_cog(Delete(bot))
