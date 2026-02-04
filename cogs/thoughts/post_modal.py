@@ -82,16 +82,30 @@ class PostModal(ui.Modal, title='新規投稿'):
             display_name = self.display_name.value.strip() if self.display_name.value else None
             
             # 入力検証
-            is_valid, error_message = self.cog.message_manager.validate_message_content(message)
-            if not is_valid:
-                await self.cog.message_manager.send_error_message(interaction, error_message)
+            # 簡易的なバリデーション（MessageManagerがないため）
+            if len(message) < 1:
+                await interaction.followup.send(
+                    "❌ **エラーが発生しました**\n\n"
+                    "投稿内容を入力してください。",
+                    ephemeral=True
+                )
                 return
             
-            if image_url:
-                is_valid, error_message = self.cog.message_manager.validate_image_url(image_url)
-                if not is_valid:
-                    await self.cog.message_manager.send_error_message(interaction, error_message)
-                    return
+            if len(message) > 2000:
+                await interaction.followup.send(
+                    "❌ **エラーが発生しました**\n\n"
+                    "投稿内容は2000文字以内で入力してください。",
+                    ephemeral=True
+                )
+                return
+            
+            if image_url and len(image_url) > 500:
+                await interaction.followup.send(
+                    "❌ **エラーが発生しました**\n\n"
+                    "画像URLは500文字以内で入力してください。",
+                    ephemeral=True
+                )
+                return
             
             # 投稿を保存
             post_id = await self.cog.save_post(
@@ -105,23 +119,23 @@ class PostModal(ui.Modal, title='新規投稿'):
             )
             
             if post_id:
-                await self.cog.message_manager.send_success_message(
-                    interaction, 
+                await interaction.followup.send(
                     f"✅ **{'公開' if self.is_public else '非公開'}投稿を作成しました！**\n\n"
-                    f"投稿ID: {post_id}"
+                    f"投稿ID: {post_id}",
+                    ephemeral=True
                 )
             else:
-                await self.cog.message_manager.send_error_message(
-                    interaction, 
-                    "❌ 投稿の作成に失敗しました。"
+                await interaction.followup.send(
+                    "❌ 投稿の作成に失敗しました。",
+                    ephemeral=True
                 )
                 
         except Exception as e:
             logger.error(f"モーダル送信中にエラーが発生しました: {e}", exc_info=True)
-            await self.cog.message_manager.send_error_message(
-                interaction, 
+            await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "投稿の作成中にエラーが発生しました。"
+                "投稿の作成中にエラーが発生しました。",
+                ephemeral=True
             )
 
 class PostSelectView(ui.View):

@@ -14,7 +14,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from managers.post_manager import PostManager
 from managers.message_ref_manager import MessageRefManager
-from managers.message_manager import MessageManager
 from config import get_channel_id, DEFAULT_AVATAR, extract_channel_id
 
 # モーダルとユーティリティをインポート
@@ -29,7 +28,6 @@ class Post(commands.Cog):
         self.bot = bot
         self.post_manager = PostManager()
         self.message_ref_manager = MessageRefManager()
-        self.message_manager = MessageManager()
         logger.info("Post cog が初期化されました")
 
     @app_commands.command(name="post", description="📝 新規投稿を作成")
@@ -50,10 +48,10 @@ class Post(commands.Cog):
             
         except Exception as e:
             logger.error(f"postコマンド実行中にエラーが発生しました: {e}", exc_info=True)
-            await self.message_manager.send_error_message(
-                interaction, 
+            await interaction.followup.send(
                 "❌ **エラーが発生しました**\n\n"
-                "投稿の作成に失敗しました。"
+                "投稿の作成に失敗しました。",
+                ephemeral=True
             )
 
     async def save_post(
@@ -123,10 +121,10 @@ class Post(commands.Cog):
             
         except Exception as e:
             logger.error(f"投稿保存中にエラーが発生しました: {e}", exc_info=True)
-            await self.message_manager.send_error_message(
-                interaction, 
+            await interaction.followup.send(
                 f"❌ **投稿の保存中にエラーが発生しました**\n\n"
-                f"詳細: {str(e)}"
+                f"詳細: {str(e)}",
+                ephemeral=True
             )
             return None
 
