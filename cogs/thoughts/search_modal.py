@@ -11,9 +11,6 @@ import discord
 from discord import app_commands, ui, Interaction
 from discord.ext import commands
 
-# SearchTypeViewをインポート
-from .search_type_view import SearchTypeView
-
 # ロガー設定
 logger = logging.getLogger(__name__)
 
@@ -132,5 +129,5 @@ class SearchModal(ui.Modal, title='🔍 詳細検索'):
                 ephemeral=True
             )
 
-# SearchTypeViewをエクスポート
-__all__ = ['SearchModal', 'SearchTypeView']
+# SearchModalのみをエクスポート
+__all__ = ['SearchModal']

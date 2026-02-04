@@ -9,9 +9,6 @@ import discord
 from discord import app_commands, ui, Interaction
 from discord.ext import commands
 
-# SearchModalをインポート
-from .search_modal import SearchModal
-
 # ロガー設定
 logger = logging.getLogger(__name__)
 
@@ -49,6 +46,9 @@ class SearchTypeView(ui.View):
     async def select_callback(self, interaction: Interaction):
         """選択時のコールバック"""
         selected = self.select.values[0]
+        
+        # SearchModalを動的にインポートして循環インポートを回避
+        from .search_modal import SearchModal
         
         if selected == "📝 投稿検索":
             modal = SearchModal(self.cog)
