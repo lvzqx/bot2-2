@@ -54,8 +54,8 @@ def search_posts(
             
             # キーワード検索
             if keyword:
-                content = post.get('content', '').lower()
-                category_match = post.get('category', '').lower()
+                content = (post.get('content') or '').lower()
+                category_match = (post.get('category') or '').lower()
                 keyword_lower = keyword.lower()
                 
                 content_match = keyword_lower in content
@@ -73,7 +73,7 @@ def search_posts(
             
             # カテゴリー検索
             if category:
-                post_category = post.get('category', '').lower()
+                post_category = (post.get('category') or '').lower()
                 category_lower = category.lower()
                 category_match = category_lower in post_category
                 

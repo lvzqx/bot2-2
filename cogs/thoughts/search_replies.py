@@ -42,7 +42,7 @@ def search_replies(
         for reply in all_replies:
             # キーワード検索
             if keyword:
-                content = reply.get('content', '').lower()
+                content = (reply.get('content') or '').lower()
                 if keyword.lower() not in content:
                     continue
             
