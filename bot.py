@@ -50,6 +50,11 @@ class ThoughtBot(commands.Bot):
         for root, dirs, files in os.walk(cogs_dir):
             for filename in files:
                 if filename.endswith(".py") and not filename.startswith("__"):
+                    # Cogファイルのみを読み込む（utils, modal, paginationなどは除外）
+                    if any(exclude in filename for exclude in ['utils', 'modal', 'pagination', 'embed', 'validation', 'type_view']):
+                        logger.info(f"ユーティリティファイルをスキップ: {filename}")
+                        continue
+                    
                     # 相対パスをモジュールパスに変換
                     rel_path = os.path.relpath(root, cogs_dir)
                     if rel_path == ".":
