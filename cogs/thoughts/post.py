@@ -330,31 +330,6 @@ class Post(commands.Cog):
                             await thread.add_user(role_member)
                         except discord.HTTPException:
                             pass
-                    
-                    embed = discord.Embed(
-                        description=message,
-                        color=discord.Color.dark_grey()
-                    )
-                    
-                    if is_anonymous:
-                        embed.set_author(name="匿名ユーザー", icon_url=DEFAULT_AVATAR)
-                    else:
-                        embed.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
-                    
-                    if image_url:
-                        embed.set_image(url=image_url)
-
-                    footer_parts = []
-                    if category:
-                        footer_parts.append(f"カテゴリー: {category}")
-                    footer_parts.append(f"投稿ID: {post_id}")
-                    # UIDは表示しない
-                    embed.set_footer(text=" | ".join(footer_parts))
-                    
-                    sent_message = await thread.send(embed=embed)
-                    
-                    # DBにはスレッドIDを保存
-                    channel = thread
                 
                 # メッセージ参照を保存（sent_messageがNoneの場合をチェック）
                 if sent_message:
