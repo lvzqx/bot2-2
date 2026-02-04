@@ -264,15 +264,16 @@ class Post(commands.Cog):
                         
                         # プライベートスレッド作成の前提条件をチェック
                         permissions = private_channel.permissions_for(interaction.guild.me)
-                        logger.info(f"  - スレッド作成権限: {permissions.create_threads}")
+                        logger.info(f"  - 公開スレッド作成権限: {permissions.create_public_threads}")
+                        logger.info(f"  - プライベートスレッド作成権限: {permissions.create_private_threads}")
                         logger.info(f"  - メッセージ送信権限: {permissions.send_messages}")
                         logger.info(f"  - スレッド管理権限: {permissions.manage_threads}")
                         
                         # 権限がない場合は早期リターン
-                        if not permissions.create_threads:
-                            logger.error(f"❌ ボットにスレッド作成権限がありません")
+                        if not permissions.create_private_threads:
+                            logger.error(f"❌ ボットにプライベートスレッド作成権限がありません")
                             await interaction.followup.send(
-                                "❌ ボットにスレッドを作成する権限がありません。\n"
+                                "❌ ボットにプライベートスレッドを作成する権限がありません。\n"
                                 "管理者にボットの権限設定を確認してください。",
                                 ephemeral=True
                             )
@@ -299,7 +300,8 @@ class Post(commands.Cog):
                             logger.error(f"❌ プライベートスレッド作成権限なし: {e}")
                             logger.error(f"❌ ボット権限確認:")
                             permissions = private_channel.permissions_for(interaction.guild.me)
-                            logger.error(f"  - create_threads: {permissions.create_threads}")
+                            logger.error(f"  - create_public_threads: {permissions.create_public_threads}")
+                            logger.error(f"  - create_private_threads: {permissions.create_private_threads}")
                             logger.error(f"  - send_messages: {permissions.send_messages}")
                             logger.error(f"  - manage_threads: {permissions.manage_threads}")
                             logger.error(f"  - manage_channels: {permissions.manage_channels}")
@@ -313,7 +315,7 @@ class Post(commands.Cog):
                             await interaction.followup.send(
                                 "❌ プライベートスレッドを作成する権限がありません。\n"
                                 "管理者に以下の権限を確認してください:\n"
-                                "• ボットに「スレッドを作成」権限\n"
+                                "• ボットに「プライベートスレッドを作成」権限\n"
                                 "• 非公開チャンネルでプライベートスレッドが有効\n"
                                 "• サーバーでプライベートスレッドが有効",
                                 ephemeral=True
