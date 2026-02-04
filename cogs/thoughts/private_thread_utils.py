@@ -23,12 +23,16 @@ logger = logging.getLogger(__name__)
 
 async def find_or_create_private_thread(
     interaction: Interaction,
-    private_channel: discord.TextChannel
+    private_channel: discord.TextChannel,
+    user_id: str = None
 ) -> Optional[discord.Thread]:
     """既存のプライベートスレッドを検索または新規作成"""
     try:
+        # user_idがなければinteraction.userを使用
+        target_user_id = user_id if user_id else str(interaction.user.id)
+        
         # 非公開投稿用の変数を初期化
-        thread_prefix = f"非公開投稿 - {interaction.user.id}"
+        thread_prefix = f"非公開投稿 - {target_user_id}"
         target_thread: Optional[discord.Thread] = None
         
         # アクティブスレッドから検索
@@ -51,7 +55,7 @@ async def find_or_create_private_thread(
 
         # スレッドがなければ新しく作成
         if target_thread is None:
-            target_thread = await create_private_thread(interaction, private_channel, thread_prefix)
+            target_thread = await create_private_thread(interaction, private_channel, thread_prefix, target_user_id)
         else:
             # 既存スレッドをアンアーカイブ
             if target_thread.archived:
@@ -67,13 +71,20 @@ async def find_or_create_private_thread(
 async def create_private_thread(
     interaction: Interaction,
     private_channel: discord.TextChannel,
-    thread_prefix: str
+    thread_prefix: str,
+    user_id: str = None
 ) -> Optional[discord.Thread]:
     """新しいプライベートスレッドを作成"""
     try:
-        thread_name = f"{thread_prefix} ({interaction.user.name})"
+        # user_idがなければinteraction.userを使用（フォールバック）
+        target_user_id = user_id if user_id else str(interaction.user.id)
+        target_user = interaction.guild.get_member(int(target_user_id)) if user_id else interaction.user
+        
+        thread_name = f"{thread_prefix} ({target_user.name if target_user else 'Unknown'})"
         logger.info(f"🔧 プライベートスレッド作成開始:")
         logger.info(f"  - スレッド名: {thread_name}")
+        logger.info(f"  - ユーザーID: {target_user_id}")
+        logger.info(f"  - ユーザー名: {target_user.name if target_user else 'Unknown'}")
         logger.info(f"  - チャンネル名: {private_channel.name}")
         logger.info(f"  - チャンネルID: {private_channel.id}")
         logger.info(f"  - チャンネルタイプ: {private_channel.type}")
@@ -108,10 +119,19 @@ async def create_private_thread(
             thread = await private_channel.create_thread(
                 name=thread_name[:100],
                 type=discord.ChannelType.private_thread,
-                reason=f"非公開投稿用スレッド作成 - {interaction.user.id}",
+                reason=f"非公開投稿用スレッド作成 - {target_user_id}",
                 invitable=False
             )
             logger.info(f"✅ プライベートスレッド作成成功: {thread.name} (ID: {thread.id})")
+            
+            # 正しいユーザーをスレッドに追加
+            if target_user:
+                try:
+                    await thread.add_user(target_user)
+                    logger.info(f"✅ ユーザーをスレッドに追加しました: {target_user.name} ({target_user.id})")
+                except Exception as add_error:
+                    logger.warning(f"⚠️ ユーザー追加に失敗しました: {add_error}")
+            
             return thread
         except discord.Forbidden as e:
             logger.error(f"❌ プライベートスレッド作成権限なし: {e}")

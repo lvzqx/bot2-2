@@ -134,7 +134,7 @@ async def create_private_post(
             return False
         
         # プライベートスレッドを検索または作成
-        thread = await find_or_create_private_thread(interaction, private_channel)
+        thread = await find_or_create_private_thread(interaction, private_channel, str(interaction.user.id))
         if not thread:
             logger.error(f"❌ プライベートスレッドの作成に失敗しました")
             return False
