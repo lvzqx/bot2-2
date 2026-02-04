@@ -2385,5 +2385,12 @@
     "post_id": 23,
     "action": "delete",
     "is_private": true
+  },
+  {
+    "timestamp": "2026-02-04T17:28:37.248002",
+    "user_id": "772268153370968117",
+    "post_id": 23,
+    "action": "create",
+    "is_private": false
   }
 ]
