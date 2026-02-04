@@ -13,6 +13,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from managers.post_manager import PostManager
 from managers.message_ref_manager import MessageRefManager
 
+# ユーティリティをインポート
+from .delete_utils import delete_discord_message, cleanup_message_ref
+
 logger = logging.getLogger(__name__)
 
 class Delete(commands.Cog):
@@ -70,25 +73,25 @@ class DeleteSelectView(ui.View):
         self.posts = posts
         self.cog = cog
         
-        # 削除選択ドロップダウン
-        self.delete_select = ui.Select(
-            placeholder="削除する投稿を選択...",
-            min_values=1,
-            max_values=1
-        )
-        
+        # 選択肢を作成
+        options = []
         for post in posts:
-            post_id = post['id']
-            content = post.get('content', '')
-            created_at = post.get('created_at')
+            content = post.get('content', '')[:50] + "..." if len(post.get('content', '')) > 50 else post.get('content', '')
+            created_at = post.get('created_at', '不明')
+            post_id = post.get('id', '不明')
             
-            content_preview = content[:50] + "..." if len(content) > 50 else content
-            
-            self.delete_select.add_option(
-                label=f"投稿ID: {post_id}",
-                description=f"{content_preview}",
-                value=str(post_id)
+            options.append(
+                discord.SelectOption(
+                    label=f"投稿ID: {post_id}",
+                    description=f"{content} ({created_at})",
+                    value=str(post_id)
+                )
             )
+        
+        self.delete_select = ui.Select(
+            placeholder="削除する投稿を選択してください",
+            options=options
+        )
         
         self.delete_select.callback = self.delete_select_callback
         self.add_item(self.delete_select)
@@ -189,115 +192,12 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                 message_id = message_ref_data.get('message_id')
                 channel_id = message_ref_data.get('channel_id')
                 
-                if message_id and channel_id:
-                    try:
-                        # 元の投稿チャンネルを取得
-                        original_channel = interaction.guild.get_channel(int(channel_id))
-                        if not original_channel:
-                            logger.error(f"❌ チャンネルが見つかりません: channel_id={channel_id}")
-                            return
-                        
-                        logger.info(f"🔧 チャンネルを取得しました: ID={channel_id}, タイプ={type(original_channel)}")
-                        
-                        # プライベートスレッドの場合は特別処理
-                        if hasattr(original_channel, 'type') and original_channel.type == discord.ChannelType.private_thread:
-                            # これはプライベートスレッド自体
-                            thread = original_channel
-                            logger.info(f"🔧 プライベートスレッドを直接削除します: スレッドID={thread.id}")
-                            logger.info(f"🔧 スレッド名: {thread.name}")
-                            
-                            try:
-                                # スレッドをアーカイブしてから削除
-                                logger.info(f"🔧 スレッドをアーカイブします...")
-                                await thread.edit(archived=True, locked=True)
-                                logger.info(f"🔧 スレッドを削除します...")
-                                await thread.delete()
-                                logger.info(f"✅ プライベートスレッドを削除しました: スレッドID={thread.id}")
-                            except discord.Forbidden:
-                                logger.error(f"❌ プライベートスレッドの削除権限がありません: スレッドID={thread.id}")
-                            except discord.HTTPException as e:
-                                logger.error(f"❌ スレッド削除HTTPエラー: {e}")
-                            except Exception as e:
-                                logger.error(f"❌ プライベートスレッド削除エラー: {e}")
-                        else:
-                            # 通常チャンネルの場合
-                            # 元の投稿メッセージを削除
-                            try:
-                                original_message = await original_channel.fetch_message(int(message_id))
-                            except discord.NotFound:
-                                logger.warning(f"⚠️ メッセージが見つかりません: message_id={message_id}")
-                                return
-                            except discord.Forbidden:
-                                logger.error(f"❌ メッセージ取得権限がありません: message_id={message_id}")
-                                return
-                            except Exception as e:
-                                logger.error(f"❌ メッセージ取得エラー: {e}")
-                                return
-                            
-                            logger.info(f"🔧 メッセージを取得しました: メッセージID={message_id}")
-                            logger.info(f"🔧 メッセージチャンネルタイプ: {type(original_message.channel)}")
-                            logger.info(f"🔧 メッセージチャンネルID: {original_message.channel.id}")
-                            
-                            # メッセージがスレッド内にあるかチェック
-                            if hasattr(original_message.channel, 'type') and original_message.channel.type == discord.ChannelType.private_thread:
-                                # これはスレッド内のメッセージ
-                                thread = original_message.channel
-                                logger.info(f"🔧 スレッド内メッセージを検出しました: スレッドID={thread.id}")
-                                
-                                try:
-                                    # スレッドをアーカイブしてから削除
-                                    logger.info(f"🔧 スレッドをアーカイブします...")
-                                    await thread.edit(archived=True, locked=True)
-                                    logger.info(f"🔧 スレッドを削除します...")
-                                    await thread.delete()
-                                    logger.info(f"✅ プライベートスレッドを削除しました: スレッドID={thread.id}")
-                                except discord.Forbidden:
-                                    logger.error(f"❌ プライベートスレッドの削除権限がありません: スレッドID={thread.id}")
-                                except discord.HTTPException as e:
-                                    logger.error(f"❌ スレッド削除HTTPエラー: {e}")
-                                except Exception as e:
-                                    logger.error(f"❌ プライベートスレッド削除エラー: {e}")
-                            elif hasattr(original_message.channel, 'type') and original_message.channel.type == discord.ChannelType.public_thread:
-                                # 公開スレッドの場合
-                                thread = original_message.channel
-                                logger.info(f"🔧 公開スレッドを検出しました: スレッドID={thread.id}")
-                                
-                                try:
-                                    # 公開スレッドも削除
-                                    await thread.edit(archived=True, locked=True)
-                                    await thread.delete()
-                                    logger.info(f"✅ 公開スレッドを削除しました: スレッドID={thread.id}")
-                                except discord.Forbidden:
-                                    logger.error(f"❌ 公開スレッドの削除権限がありません: スレッドID={thread.id}")
-                                except discord.HTTPException as e:
-                                    logger.error(f"❌ 公開スレッド削除HTTPエラー: {e}")
-                                except Exception as e:
-                                    logger.error(f"❌ 公開スレッド削除エラー: {e}")
-                            else:
-                                # 通常のメッセージの場合
-                                logger.info(f"🔧 通常メッセージを削除します: チャンネルID={original_channel.id}")
-                                try:
-                                    await original_message.delete()
-                                    logger.info(f"✅ 元の投稿メッセージを削除しました: メッセージID={message_id}")
-                                except discord.Forbidden:
-                                    logger.error(f"❌ メッセージ削除権限がありません: メッセージID={message_id}")
-                                except discord.HTTPException as e:
-                                    logger.error(f"❌ メッセージ削除HTTPエラー: {e}")
-                                except Exception as e:
-                                    logger.error(f"❌ メッセージ削除エラー: {e}")
-                    except discord.NotFound:
-                        logger.warning(f"⚠️ 元の投稿メッセージが見つかりません: メッセージID={message_id}")
-                    except discord.Forbidden:
-                        logger.error(f"❌ 元の投稿メッセージの削除権限がありません: メッセージID={message_id}")
-                    except Exception as e:
-                        logger.error(f"❌ 元の投稿メッセージ削除エラー: {e}")
-                else:
-                    logger.warning(f"⚠️ メッセージIDまたはチャンネルIDがありません: message_id={message_id}, channel_id={channel_id}")
+                await delete_discord_message(interaction, message_id, channel_id, self.cog.message_ref_manager)
             else:
                 logger.warning(f"⚠️ メッセージ参照が見つかりません: 投稿ID={post_id}")
             
             # メッセージ参照を削除
-            self.cog.message_ref_manager.delete_message_ref(post_id)
+            cleanup_message_ref(post_id, self.cog.message_ref_manager)
             
             # GitHubに保存する処理
             from utils.github_sync import sync_to_github
@@ -311,5 +211,6 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                 ephemeral=True
             )
 
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
+    """Cogをセットアップする"""
     await bot.add_cog(Delete(bot))
