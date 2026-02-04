@@ -114,6 +114,44 @@ async def create_private_post(
         
         logger.info(f"✅ 非公開チャンネル取得成功: {private_channel.name} (ID: {private_channel.id})")
         
+        # 非公開チャンネルの権限を確認
+        logger.info(f"🔧 非公開チャンネル権限確認:")
+        logger.info(f"  - チャンネル名: {private_channel.name}")
+        logger.info(f"  - チャンネルタイプ: {private_channel.type}")
+        logger.info(f"  - NSFW: {private_channel.nsfw}")
+        logger.info(f"  - 位置: {private_channel.position}")
+        
+        # ボットの権限を確認
+        bot_permissions = private_channel.permissions_for(interaction.guild.me)
+        logger.info(f"  - ボット権限:")
+        logger.info(f"    * read_messages: {bot_permissions.read_messages}")
+        logger.info(f"    * send_messages: {bot_permissions.send_messages}")
+        logger.info(f"    * create_private_threads: {bot_permissions.create_private_threads}")
+        logger.info(f"    * manage_threads: {bot_permissions.manage_threads}")
+        
+        # ユーザーの権限を確認
+        user_permissions = private_channel.permissions_for(interaction.user)
+        logger.info(f"  - ユーザー権限:")
+        logger.info(f"    * read_messages: {user_permissions.read_messages}")
+        logger.info(f"    * send_messages: {user_permissions.send_messages}")
+        logger.info(f"    * create_private_threads: {user_permissions.create_private_threads}")
+        
+        # ユーザーがチャンネルにアクセスできるか確認
+        if not user_permissions.read_messages:
+            logger.warning(f"⚠️ ユーザーが非公開チャンネルを閲覧できません: {interaction.user.name}")
+            # ユーザーにチャンネル閲覧権限を付与
+            try:
+                await private_channel.set_permissions(interaction.user, read_messages=True, send_messages=True)
+                logger.info(f"✅ 非公開チャンネル権限を設定しました: {interaction.user.name}")
+            except discord.Forbidden:
+                logger.error(f"❌ 非公開チャンネル権限設定権限がありません")
+                await interaction.followup.send(
+                    "❌ 非公開チャンネルの権限設定ができません。\n"
+                    "管理者にチャンネル権限の確認を依頼してください。",
+                    ephemeral=True
+                )
+                return False
+        
         # 非公開投稿用の変数を初期化
         thread_prefix = f"非公開投稿 - {interaction.user.id}"
         target_thread: Optional[discord.Thread] = None
@@ -304,15 +342,56 @@ async def create_private_post(
             except Exception as e:
                 logger.error(f"ロール付与エラー: {e}")
 
-        # スレッドにユーザーを追加
+        # スレッドにユーザーを追加と権限設定
+        thread_to_add = None
         if 'thread' in locals():
+            thread_to_add = thread
+        elif hasattr(channel, 'type') and channel.type == discord.ChannelType.private_thread:
+            thread_to_add = channel
+        
+        if thread_to_add:
             try:
-                await thread.add_member(interaction.user)
+                # スレッドにユーザーを追加
+                await thread_to_add.add_member(interaction.user)
                 logger.info(f"ユーザーをプライベートスレッドに追加しました: {interaction.user.name}")
+                
+                # スレッドの権限を確認・設定
+                logger.info(f"🔧 スレッド権限確認: スレッドID={thread_to_add.id}")
+                logger.info(f"  - スレッド名: {thread_to_add.name}")
+                logger.info(f"  - スレッドタイプ: {thread_to_add.type}")
+                logger.info(f"  - メンバー数: {len(thread_to_add.members)}")
+                
+                # ユーザーがスレッドにアクセスできるか確認
+                user_can_view = thread_to_add.permissions_for(interaction.user).read_messages
+                logger.info(f"  - ユーザーの閲覧権限: {user_can_view}")
+                
+                if not user_can_view:
+                    logger.warning(f"⚠️ ユーザーがスレッドを閲覧できません: {interaction.user.name}")
+                    # 権限を明示的に設定
+                    await thread_to_add.set_permissions(interaction.user, read_messages=True, send_messages=True)
+                    logger.info(f"✅ スレッド権限を設定しました: {interaction.user.name}")
+                
             except discord.Forbidden:
-                logger.warning("スレッドメンバー追加権限がありません")
+                logger.error(f"❌ スレッドメンバー追加権限がありません: スレッドID={thread_to_add.id}")
+                await interaction.followup.send(
+                    "❌ プライベートスレッドに追加する権限がありません。\n"
+                    "管理者にボットの権限設定を確認してください。",
+                    ephemeral=True
+                )
+                return False
             except Exception as e:
-                logger.error(f"スレッドメンバー追加エラー: {e}")
+                logger.error(f"❌ スレッドメンバー追加エラー: {e}")
+                await interaction.followup.send(
+                    "❌ スレッドへの追加中にエラーが発生しました。",
+                    ephemeral=True
+                )
+                return False
+        else:
+            logger.warning(f"⚠️ スレッドオブジェクトが見つかりません")
+            logger.info(f"  - channel type: {type(channel)}")
+            logger.info(f"  - channel id: {channel.id}")
+            if hasattr(channel, 'type'):
+                logger.info(f"  - channel discord type: {channel.type}")
         
         return True
         
