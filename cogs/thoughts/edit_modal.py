@@ -6,6 +6,7 @@ import discord
 from discord import app_commands, ui, Interaction
 from discord.ext import commands
 import logging
+from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
