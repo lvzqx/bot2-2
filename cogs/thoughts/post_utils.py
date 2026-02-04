@@ -60,7 +60,7 @@ async def create_public_post(
         elif display_name:
             embed.set_author(name=display_name, icon_url=DEFAULT_AVATAR)
         else:
-            embed.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
+            embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
         
         # 画像URLがあれば設定
         if image_url:
@@ -152,7 +152,7 @@ async def create_private_post(
         elif display_name:
             embed.set_author(name=display_name, icon_url=DEFAULT_AVATAR)
         else:
-            embed.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
+            embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
         
         # 画像URLがあれば設定
         if image_url:

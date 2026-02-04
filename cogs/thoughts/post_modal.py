@@ -49,7 +49,7 @@ class PostModal(ui.Modal, title='新規投稿'):
         
         self.author_display = ui.TextInput(
             label='👤 投稿者表示',
-            placeholder='「匿名」または空欄（本名）',
+            placeholder='「匿名」または空欄（Discordユーザー名）',
             required=False,
             style=discord.TextStyle.short,
             max_length=10
