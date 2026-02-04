@@ -115,8 +115,7 @@ class ReplyModal(ui.Modal, title="💬 リプライする投稿"):
                                     reply_message = await replies_channel.send(embed=reply_embed)
                                     
                                     # リプライファイルに両方のメッセージIDを保存
-                                    # TODO: ReplyManagerのupdate_reply_message_idメソッドを追加
-                                    # self.reply_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
+                                    self.reply_manager.update_reply_message_id(reply_id, str(reply_message.id), str(replies_channel.id), str(forwarded_message.id))
                                     logger.info(f"✅ リプライDiscordメッセージ処理完了: reply_id={reply_id}")
                                 else:
                                     logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")

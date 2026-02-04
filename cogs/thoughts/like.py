@@ -99,8 +99,7 @@ class LikeModal(ui.Modal, title="❤️ いいねする投稿"):
                                     like_message = await likes_channel.send(f"❤️ いいね：{interaction.user.display_name}")
                                     
                                     # いいねファイルに両方のメッセージIDを保存
-                                    # TODO: LikeManagerのupdate_like_message_idメソッドを追加
-                                    # self.like_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
+                                    self.like_manager.update_like_message_id(like_id, str(like_message.id), str(likes_channel.id), str(forwarded_message.id))
                                     logger.info(f"✅ いいねDiscordメッセージ処理完了: like_id={like_id}")
                                 else:
                                     logger.warning(f"元のチャンネルが見つかりません: channel_id={channel_id}")
