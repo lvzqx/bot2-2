@@ -199,9 +199,6 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
             # メッセージ参照を削除
             cleanup_message_ref(post_id, self.cog.message_ref_manager)
             
-            # 非公開ロールを確認して外す
-            await self.remove_private_role_if_needed(interaction, post_id)
-            
             # GitHubに保存する処理
             from utils.github_sync import sync_to_github
             await sync_to_github("delete post", interaction.user.name, post_id)
@@ -213,49 +210,6 @@ class DeleteConfirmModal(ui.Modal, title="🗑️ 投稿削除確認"):
                 "投稿の削除に失敗しました。",
                 ephemeral=True
             )
-
-    async def remove_private_role_if_needed(self, interaction: Interaction, deleted_post_id: int) -> None:
-        """非公開ロールを確認して必要なら外す"""
-        try:
-            # 非公開ロールを取得
-            private_role = discord.utils.get(interaction.guild.roles, name="非公開")
-            if not private_role:
-                logger.info("非公開ロールが見つかりません")
-                return
-            
-            # ユーザーが非公開ロールを持っているか確認
-            member = interaction.guild.get_member(interaction.user.id)
-            if not member:
-                logger.warning(f"ユーザーが見つかりません: {interaction.user.id}")
-                return
-            
-            if private_role not in member.roles:
-                logger.info(f"ユーザーは非公開ロールを持っていません: {interaction.user.name}")
-                return
-            
-            # ユーザーの他の非公開投稿を確認
-            user_private_posts = self.post_manager.search_posts(
-                user_id=str(interaction.user.id),
-                is_private=True
-            )
-            
-            # 削除した投稿以外に非公開投稿があるか確認
-            has_other_private_posts = any(
-                post.get('id') != deleted_post_id 
-                for post in user_private_posts
-            )
-            
-            if not has_other_private_posts:
-                # 他に非公開投稿がない場合のみロールを外す
-                await member.remove_roles(private_role, reason="非公開投稿がなくなったため")
-                logger.info(f"✅ 非公開ロールを外しました: {interaction.user.name}")
-            else:
-                logger.info(f"📝 他に非公開投稿があるためロールは保持: {interaction.user.name}")
-                
-        except discord.Forbidden:
-            logger.warning("❌ ロール管理権限がありません")
-        except Exception as e:
-            logger.error(f"❌ 非公開ロール管理エラー: {e}")
 
 async def setup(bot: commands.Bot) -> None:
     """Cogをセットアップする"""

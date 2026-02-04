@@ -230,47 +230,6 @@ async def setup_private_thread_permissions(
         logger.error(f"❌ スレッド権限設定エラー: {e}")
         return False
 
-async def setup_private_role(
-    interaction: Interaction
-) -> Optional[discord.Role]:
-    """非公開投稿用ロールを設定"""
-    try:
-        # 非公開投稿用ロールを作成
-        private_role = discord.utils.get(interaction.guild.roles, name="非公開")
-        if not private_role:
-            try:
-                private_role = await interaction.guild.create_role(
-                    name="非公開",
-                    color=discord.Color.dark_grey(),
-                    reason="非公開投稿用ロール"
-                )
-                logger.info(f"非公開投稿用ロールを作成しました: {private_role.name}")
-            except discord.Forbidden:
-                logger.warning("非公開投稿用ロールの作成権限がありません")
-                return None
-            except Exception as e:
-                logger.error(f"ロール作成エラー: {e}")
-                return None
-
-        # ユーザーにロールを付与
-        if private_role:
-            try:
-                await interaction.user.add_roles(private_role)
-                logger.info(f"ユーザーに非公開ロールを付与しました: {interaction.user.name}")
-                return private_role
-            except discord.Forbidden:
-                logger.warning("ロール付与権限がありません")
-                return None
-            except Exception as e:
-                logger.error(f"ロール付与エラー: {e}")
-                return None
-        
-        return None
-        
-    except Exception as e:
-        logger.error(f"❌ 非公開ロール設定エラー: {e}")
-        return None
-
 async def check_private_channel_permissions(
     interaction: Interaction,
     private_channel: discord.TextChannel

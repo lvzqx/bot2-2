@@ -22,7 +22,6 @@ from config import get_channel_id, DEFAULT_AVATAR, extract_channel_id
 from .private_thread_utils import (
     find_or_create_private_thread,
     setup_private_thread_permissions,
-    setup_private_role,
     check_private_channel_permissions
 )
 
@@ -186,9 +185,6 @@ async def create_private_post(
             )
             return False
 
-        # 非公開ロールを設定
-        private_role = await setup_private_role(interaction)
-        
         # スレッド権限を設定
         if not await setup_private_thread_permissions(interaction, thread):
             return False

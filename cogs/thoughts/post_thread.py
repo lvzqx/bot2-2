@@ -149,9 +149,6 @@ class PostThreadManager:
             # ユーザーをスレッドに追加
             await thread.add_user(interaction.user)
             
-            # 非公開投稿用ロールを作成・管理
-            await self.manage_private_role(interaction, thread)
-            
             return thread
             
         except Exception as e:
@@ -180,37 +177,6 @@ class PostThreadManager:
         
         return target_thread
     
-    async def manage_private_role(self, interaction: Interaction, thread: discord.Thread):
-        """非公開投稿用ロールを管理する"""
-        try:
-            # 非公開投稿用ロールを作成
-            private_role = discord.utils.get(interaction.guild.roles, name="非公開")
-            if not private_role:
-                private_role = await interaction.guild.create_role(
-                    name="非公開",
-                    reason="非公開投稿用ロール作成"
-                )
-                logger.info(f"✅ 非公開ロールを作成しました: {private_role.name}")
-            
-            # 投稿者にロールを付与
-            member = interaction.guild.get_member(interaction.user.id)
-            if member and private_role not in member.roles:
-                await member.add_roles(private_role, reason="非公開投稿権限付与")
-                logger.info(f"✅ ユーザーに非公開ロールを付与しました: {interaction.user.name}")
-            
-            # 非公開投稿用ロールをスレッドに追加
-            for role_member in private_role.members:
-                try:
-                    await thread.add_user(role_member)
-                except discord.HTTPException:
-                    pass
-            
-            logger.info(f"✅ 非公開ロールのメンバーをスレッドに追加しました: {len(private_role.members)}人")
-            
-        except Exception as e:
-            logger.error(f"プライベートスレッドのメンバー追加にエラー: {e}")
-            # ロール追加エラーはスレッド作成の失敗とはしない
-
 class PostThread(commands.Cog):
     """プライベートスレッドCog"""
     
