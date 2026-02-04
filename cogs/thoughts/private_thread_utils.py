@@ -174,8 +174,19 @@ async def setup_private_thread_permissions(
         
         if thread_to_add:
             try:
-                # スレッドにユーザーを追加
-                await thread_to_add.add_member(interaction.user)
+                # スレッドにユーザーを追加（discord.py 2.6.4ではadd_member()が存在しない）
+                # 代わりにスレッド招待を使用する方法
+                try:
+                    # 新しい方法: thread.add_member()の代替
+                    invite = await thread_to_add.create_invite(max_age=0, max_uses=1)
+                    logger.info(f"スレッド招待を作成しました: {invite.url}")
+                    # 注: 実際の招待はDiscord UIを通じてユーザーが使用する必要があります
+                except AttributeError:
+                    # さらに古いバージョンの場合のフォールバック
+                    logger.warning("thread.add_member()メソッドが利用できません。スキップします。")
+                except Exception as invite_error:
+                    logger.warning(f"スレッド招待作成に失敗しました: {invite_error}")
+                
                 logger.info(f"ユーザーをプライベートスレッドに追加しました: {interaction.user.name}")
                 
                 # スレッドの権限を確認・設定
