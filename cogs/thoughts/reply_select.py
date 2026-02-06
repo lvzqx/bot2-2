@@ -14,7 +14,7 @@ class ReplySelectView(ui.View):
     """投稿選択用ビュー（リプライ）"""
     
     def __init__(self, items: List[Dict[str, Any]], cog):
-        super().__init__(timeout=None)
+        super().__init__(timeout=300.0)  # 5分でタイムアウト
         self.items = items
         self.cog = cog
         
@@ -69,6 +69,22 @@ class ReplySelectView(ui.View):
         except Exception as e:
             logger.error(f"リプライ選択エラー: {e}")
             await interaction.response.send_message("エラーが発生しました。もう一度お試しください。", ephemeral=True)
+
+    async def on_timeout(self):
+        """タイムアウト時の処理"""
+        # 選択メニューを無効化
+        self.select_menu.disabled = True
+        # メッセージを更新（可能であれば）
+        try:
+            # タイムアウトメッセージを送信
+            embed = discord.Embed(
+                title="⏰ タイムアウト",
+                description="選択時間が5分を超えたため、操作をキャンセルしました。",
+                color=discord.Color.orange()
+            )
+            await self.message.edit(embed=embed, view=self)
+        except Exception as e:
+            logger.warning(f"タイムアウト時のメッセージ更新に失敗: {e}")
 
 
 class ReplyModal(ui.Modal, title="💬 リプライ内容"):
