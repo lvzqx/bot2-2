@@ -502,5 +502,19 @@
     "post_id": 11,
     "action": "delete",
     "is_private": false
+  },
+  {
+    "timestamp": "2026-02-07T17:09:26.577101",
+    "user_id": "772268153370968117",
+    "post_id": 9,
+    "action": "read",
+    "is_private": false
+  },
+  {
+    "timestamp": "2026-02-07T17:09:26.578037",
+    "user_id": "772268153370968117",
+    "post_id": 9,
+    "action": "delete",
+    "is_private": false
   }
 ]
